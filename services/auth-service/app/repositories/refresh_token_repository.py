@@ -2,6 +2,8 @@ from sqlalchemy.orm import Session
 
 from app.models.refresh_token import RefreshToken
 
+from datetime import datetime
+
 class RefreshTokenRepository:
     def create(self, db: Session, refresh_token: RefreshToken):
         db.add(refresh_token)
@@ -20,5 +22,9 @@ class RefreshTokenRepository:
         return refresh_token
         
 
-    def delete_expired():
-        pass
+    def delete_expired(self, db: Session):
+        db.query(RefreshToken).filter(
+            RefreshToken.expires_at < datatime.utcnow()
+        ).delete()
+
+        db.commit()

@@ -5,9 +5,14 @@ from app.schemas.auth_schema import RegisterRequest, LoginRequest
 from passlib.context import CryptContext
 from app.models.user import User
 from app.repositories.role_repository import RoleRepository
+from app.repositories.refresh_token_repository import RefreshTokenRepository
 from app.core.security import (hash_password,verify_password)
 from app.core.security import (verify_password,create_access_token)
 from app.core.security import (verify_password, create_access_token)
+from datetime import datetime, timedelta, timezone
+from app.core.security import (create_access_token,create_refresh_token)
+from app.models.refresh_token import RefreshToken
+from app.core.config import settings
 
 pwd_context = CryptContext(
     schemes=["bcrypt"],
@@ -19,6 +24,7 @@ class AuthService:
     def __init__(self):
         self.user_repository = UserRepository()
         self.role_repository = RoleRepository()
+        self.refresh_token_repository = RefreshTokenRepository()
     
     def register(self, db: Session,request: RegisterRequest):
         existing_user = self.user_repository.get_by_email(
@@ -76,12 +82,65 @@ class AuthService:
                 "email": user.email
             }
         )
+
+        refresh_token = create_refresh_token(
+            data={
+                "sub":str(user.id)
+            }
+        )
+
+        refresh_token_entity = RefreshToken(
+            user_id=user.id,
+            token=refresh_token,
+            expires_at=datetime.now(timezone.utc) + timedelta(
+                days=settings.REFRESH_TOKEN_EXPIRE_DAYS
+            )
+        )
+
+        self.refresh_token_repository.create(
+            db=db,
+            refresh_token=refresh_token_entity
+        )
+
         return {
             "access_token": access_token,
+            "refresh_token": refresh_token,
             "token_type": "bearer"
         }
-    def refresh_token(self, db: Session,request: RegisterRequest):
-        pass
+    
+
+    def refresh(self, db: Session,request: RegisterRequest):
+
+        stored_token = self.refresh_token_repository.get_by_token(
+            db=db,
+            token=request.refresh_token
+        )
+
+        if not stored_token:
+            raise HTTPException(status_code=401, detail="Invalid refresh token")
+
+        if stored_token.is_revoked:
+            raise HTTPException(
+                    status_code=401,
+            detail="Refresh token revoked"
+            )
+
+        if stored_token.expires_at < datetime.now(timezone.utc):
+            raise HTTPException(
+                status_code=401,
+                detail="Refresh token expired"
+            )
+
+        new_access_token = create_access_token(
+            data={
+                "sub": str(stored_token.user_id)
+            }
+        )
+
+        return {
+            "access_token": new_access_token,
+            "token_type": "bearer"
+        }
 
     def logout(self, db: Session,request: RegisterRequest):
         pass

@@ -1,6 +1,6 @@
 from email.policy import default
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -30,7 +30,7 @@ class RefreshToken(Base):
     )
 
     expires_at: Mapped[datetime] = mapped_column(
-        DateTime,
+        DateTime(timezone=True),
         nullable=False
     )
 
@@ -40,6 +40,6 @@ class RefreshToken(Base):
     )
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=datetime.utcnow
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc)
     )

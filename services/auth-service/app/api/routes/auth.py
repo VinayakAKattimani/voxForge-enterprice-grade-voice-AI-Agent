@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.dependencies.db import get_db
-from app.schemas.auth_schema import LoginRequest, RegisterRequest
+from app.schemas.auth_schema import LoginRequest, RegisterRequest, RefreshTokenRequest
 from app.services.auth_service import AuthService
 
 router = APIRouter(
@@ -22,6 +22,13 @@ def register(request: RegisterRequest, db : Session = Depends(get_db)):
 @router.post("/login")
 def login(request: LoginRequest, db: Session=Depends(get_db)):
     return auth_service.login(
+        db=db,
+        request=request
+    )
+
+@router.post("/refresh")
+def refresh(request:RefreshTokenRequest, db:Session = Depends(get_db)):
+    return auth_service.refresh(
         db=db,
         request=request
     )
