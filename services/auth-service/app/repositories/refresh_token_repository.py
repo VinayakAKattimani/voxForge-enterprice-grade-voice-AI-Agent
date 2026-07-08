@@ -15,7 +15,7 @@ class RefreshTokenRepository:
         return db.query(RefreshToken).filter(RefreshToken.token == token).first()
 
 
-    def revoke(self, db: Session, refresh_token: ReferenceError):
+    def revoke(self, db: Session, refresh_token: RefreshToken):
         refresh_token.is_revoked = True
         db.commit()
         db.refresh(refresh_token)
@@ -24,7 +24,7 @@ class RefreshTokenRepository:
 
     def delete_expired(self, db: Session):
         db.query(RefreshToken).filter(
-            RefreshToken.expires_at < datatime.utcnow()
+            RefreshToken.expires_at < datetime.utcnow()
         ).delete()
 
         db.commit()

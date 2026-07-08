@@ -1,23 +1,20 @@
+from uuid import UUID
+
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.repositories.user_repository import UserRepository
-from app.schemas.auth_schema import RegisterRequest, LoginRequest
-from passlib.context import CryptContext
+from app.schemas.auth_schema import (RegisterRequest, LoginRequest, RefreshTokenRequest, RegisterResponse, TokenResponse, LogoutResponse)
 from app.models.user import User
 from app.repositories.role_repository import RoleRepository
 from app.repositories.refresh_token_repository import RefreshTokenRepository
-from app.core.security import (hash_password,verify_password)
-from app.core.security import (verify_password,create_access_token)
-from app.core.security import (verify_password, create_access_token)
+from app.core.security import (hash_password,verify_password, create_access_token, create_refresh_token)
 from datetime import datetime, timedelta, timezone
-from app.core.security import (create_access_token,create_refresh_token)
 from app.models.refresh_token import RefreshToken
 from app.core.config import settings
+import logging
 
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto"
-)
+logger = logging.getLogger(__name__)
+
 
 class AuthService:
 
@@ -25,8 +22,35 @@ class AuthService:
         self.user_repository = UserRepository()
         self.role_repository = RoleRepository()
         self.refresh_token_repository = RefreshTokenRepository()
+
+    def _create_and_store_refresh_token(self, db: Session, user_id: UUID) -> str:
+        """Create, store, and return a new refresh token."""
+
+        refresh_token = create_refresh_token(
+            data={
+                "sub": str(user_id)
+            }
+        )
+
+        refresh_token_entity = RefreshToken(
+            user_id=user_id,
+            token=refresh_token,
+            expires_at=datetime.now(timezone.utc)
+            + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        )
+
+        self.refresh_token_repository.create(
+            db=db,
+            refresh_token=refresh_token_entity
+        )
+
+        return refresh_token
     
     def register(self, db: Session,request: RegisterRequest):
+        
+        """Register a new user with the default USER role."""
+
+
         existing_user = self.user_repository.get_by_email(
             db=db,
             email=request.email
@@ -56,24 +80,39 @@ class AuthService:
             db=db,
             user=user
         )
-        return {
-            "message": "User registered successfully",
-            "user_id": created_user.id,
-            "email" : created_user.email
-        }
+
+        logger.info(
+            "User registered successfully: %s",
+            created_user.email
+        )
+        
+        return RegisterResponse(
+            message="User registered successfully",
+            user_id=created_user.id,
+            email=created_user.email
+        )
     
     
 
     def login(self, db: Session,request: LoginRequest):
+        """Authenticate a user and return access and refresh tokens."""
         user = self.user_repository.get_by_email(
         db=db,
         email=request.email
         )
 
         if not user:
+            logger.warning(
+                "Failed login attempt for email: %s",
+                request.email
+            )
             raise HTTPException(status_code=401, detail="Invalid email or password")
         
         if not verify_password(request.password, user.password_hash):
+            logger.warning(
+                "Failed login attempt for email: %s",
+                request.email
+            )
             raise HTTPException(status_code=401, detail="Invalid email or password")
 
         access_token = create_access_token(
@@ -83,33 +122,25 @@ class AuthService:
             }
         )
 
-        refresh_token = create_refresh_token(
-            data={
-                "sub":str(user.id)
-            }
-        )
-
-        refresh_token_entity = RefreshToken(
-            user_id=user.id,
-            token=refresh_token,
-            expires_at=datetime.now(timezone.utc) + timedelta(
-                days=settings.REFRESH_TOKEN_EXPIRE_DAYS
-            )
-        )
-
-        self.refresh_token_repository.create(
+        refresh_token = self._create_and_store_refresh_token(
             db=db,
-            refresh_token=refresh_token_entity
+            user_id=user.id
         )
 
-        return {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "token_type": "bearer"
-        }
+        logger.info(
+            "User logged in successfully: %s",
+            user.email
+        )
+
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type="bearer"
+        )
     
 
-    def refresh(self, db: Session,request: RegisterRequest):
+    def refresh(self, db: Session, request: RefreshTokenRequest):
+        """Validate a refresh token and issue a new token pair."""
 
         stored_token = self.refresh_token_repository.get_by_token(
             db=db,
@@ -117,19 +148,28 @@ class AuthService:
         )
 
         if not stored_token:
-            raise HTTPException(status_code=401, detail="Invalid refresh token")
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid refresh token"
+            )
 
         if stored_token.is_revoked:
             raise HTTPException(
-                    status_code=401,
-            detail="Refresh token revoked"
+                status_code=401,
+                detail="Refresh token revoked"
             )
 
         if stored_token.expires_at < datetime.now(timezone.utc):
             raise HTTPException(
                 status_code=401,
                 detail="Refresh token expired"
-            )
+        )
+
+   
+        self.refresh_token_repository.revoke(
+            db=db,
+            refresh_token=stored_token
+        )
 
         new_access_token = create_access_token(
             data={
@@ -137,13 +177,49 @@ class AuthService:
             }
         )
 
-        return {
-            "access_token": new_access_token,
-            "token_type": "bearer"
-        }
+        logger.info(
+            "Refresh token rotated for user: %s",
+            stored_token.user_id
+        )
 
-    def logout(self, db: Session,request: RegisterRequest):
-        pass
+        new_refresh_token = self._create_and_store_refresh_token(
+            db=db,
+            user_id=stored_token.user_id
+        )
+
+        return TokenResponse(
+            access_token=new_access_token,
+            refresh_token=new_refresh_token,
+            token_type="bearer"
+        )
+
+    def logout(self, db: Session,request: RefreshTokenRequest):
+        """Revoke the provided refresh token and log the user out."""
+        stored_token = self.refresh_token_repository.get_by_token(
+            db=db,
+            token=request.refresh_token
+        )
+
+        if not stored_token:
+            raise HTTPException(
+            status_code=404,
+            detail="Refresh token not found"
+            )
+        
+        self.refresh_token_repository.revoke(
+            db=db,
+            refresh_token=stored_token
+        )
+
+        logger.info(
+            "User logged out: %s",
+             stored_token.user_id
+        )
+        
+        return LogoutResponse(
+            message="Logged out successfully"
+        )
 
     def get_current_user(self, db: Session,request: RegisterRequest):
+        """Return the currently authenticated user."""
         pass

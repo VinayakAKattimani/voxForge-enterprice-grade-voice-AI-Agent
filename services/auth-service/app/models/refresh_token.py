@@ -1,4 +1,3 @@
-from email.policy import default
 import uuid
 from datetime import datetime, timezone
 

@@ -1,5 +1,4 @@
-import email
-
+from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -15,3 +14,18 @@ class LoginRequest(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token : str
+
+class RegisterResponse(BaseModel):
+    message: str
+    user_id: UUID
+    email: EmailStr
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str
+
+
+class LogoutResponse(BaseModel):
+    message: str
