@@ -1,0 +1,26 @@
+from fastapi import FastAPI
+from app.api.v1.chat import router as chat_router
+from app.api.v1.health import router as health_router
+from app.exceptions.llm_exception import LLMException
+from app.exceptions.handlers import llm_exception_handler
+
+app = FastAPI(
+    title="LLM Service",
+    version="1.0.0"
+)
+
+
+app.include_router(chat_router,prefix="/api/v1")
+app.include_router(health_router,prefix="/api/v1")
+
+app.add_exception_handler(
+    LLMException,
+    llm_exception_handler
+)
+
+@app.get("/health")
+def health():
+    return {
+        "service": "llm-service",
+        "status": "running"
+    }
