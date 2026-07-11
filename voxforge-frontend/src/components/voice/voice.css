@@ -1,0 +1,61 @@
+/* ---------- Waveform ---------- */
+.waveform-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ---------- Mic button ---------- */
+.mic-button {
+  position: relative;
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-500);
+  color: #fff;
+  box-shadow: var(--shadow-md);
+  transition: background var(--dur-base) var(--ease), transform var(--dur-fast) var(--ease);
+  flex-shrink: 0;
+}
+.mic-button:hover { transform: scale(1.03); }
+.mic-button:active { transform: scale(0.98); }
+
+.mic-core { position: relative; z-index: 2; display: flex; }
+
+.mic-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent-400);
+  opacity: 0;
+}
+
+.mic-idle { background: var(--accent-500); }
+
+.mic-listening { background: var(--accent-600); }
+.mic-listening .mic-ring-1 { animation: mic-pulse 1.8s ease-out infinite; }
+.mic-listening .mic-ring-2 { animation: mic-pulse 1.8s ease-out infinite 0.6s; }
+
+.mic-thinking { background: var(--n-600); }
+.mic-thinking .mic-core { animation: mic-spin 1.1s linear infinite; }
+
+.mic-speaking { background: var(--success); }
+.mic-speaking .mic-ring-1 { animation: mic-pulse 1.2s ease-out infinite; }
+
+@keyframes mic-pulse {
+  0% { transform: scale(1); opacity: 0.55; }
+  100% { transform: scale(1.55); opacity: 0; }
+}
+@keyframes mic-spin {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(20deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mic-listening .mic-ring-1, .mic-listening .mic-ring-2, .mic-speaking .mic-ring-1, .mic-thinking .mic-core {
+    animation: none;
+  }
+}

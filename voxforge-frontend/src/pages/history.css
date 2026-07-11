@@ -1,0 +1,20 @@
+.history-toolbar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.history-toolbar .input-wrap { flex: 1; min-width: 220px; }
+
+.history-detail-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.history-detail-meta { font-size: 12px; color: var(--text-tertiary); margin-bottom: 16px; }
+.history-summary-box {
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}

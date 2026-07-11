@@ -1,0 +1,34 @@
+.transcript-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  height: 100%;
+  padding-right: 4px;
+}
+
+.transcript-msg { display: flex; flex-direction: column; max-width: 82%; }
+.transcript-msg.from-user { align-self: flex-end; align-items: flex-end; }
+.transcript-msg.from-ai { align-self: flex-start; align-items: flex-start; }
+
+.transcript-bubble {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.from-user .transcript-bubble { background: var(--accent-500); color: #fff; border-bottom-right-radius: 4px; }
+.from-ai .transcript-bubble { background: var(--surface-sunken); color: var(--text-primary); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+
+.transcript-bubble-live { background: var(--accent-400); }
+.transcript-ts { font-size: 10.5px; color: var(--text-tertiary); margin-top: 4px; padding: 0 4px; }
+
+.caret {
+  display: inline-block;
+  width: 2px; height: 12px;
+  background: currentColor;
+  margin-left: 3px;
+  vertical-align: middle;
+  animation: caret-blink 1s step-end infinite;
+}
+@keyframes caret-blink { 50% { opacity: 0; } }
