@@ -1,17 +1,26 @@
 from fastapi import FastAPI
 
-from app.core.config import settings
+from app.api.v1.router import api_router
+from app.middleware.request_logging import request_logging_middleware
 
 app = FastAPI(
-    title=settings.APP_NAME,
-    version=settings.APP_VERSION,
+    title="Conversation Service",
+    version="1.0.0",
+)
+
+app.middleware("http")(
+    request_logging_middleware
+)
+
+app.include_router(
+    api_router,
+    prefix="/api/v1",
 )
 
 
 @app.get("/")
-async def root():
+def root():
     return {
-        "service": settings.APP_NAME,
-        "version": settings.APP_VERSION,
+        "service": "conversation-service",
         "status": "running",
     }
