@@ -4,7 +4,12 @@ from app.prompts.system_prompt import SYSTEM_PROMPT
 class PromptBuilder:
 
     @staticmethod
-    def build(user_message: str,history: list) -> str:
+    def build(
+        user_message: str,
+        history: list,
+        context: str,
+    ) -> str:
+
         history_text = ""
 
         for message in history:
@@ -14,13 +19,16 @@ class PromptBuilder:
             )
 
         return f"""
-                    {SYSTEM_PROMPT}
+{SYSTEM_PROMPT}
 
-                    Conversation History:
-                    {history_text}
+Knowledge Context:
+{context}
 
-                    User:
-                    {user_message}
+Conversation History:
+{history_text}
 
-                    Assistant:
-                    """
+User:
+{user_message}
+
+Assistant:
+"""

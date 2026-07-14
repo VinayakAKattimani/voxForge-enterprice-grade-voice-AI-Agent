@@ -3,6 +3,7 @@ from app.schemas.response import ChatResponse
 from app.providers.factory import ProviderFactory
 from app.services.conversation_manager import ConversationManager
 from app.core.logger import logger
+from app.clients.knowledge_client import KnowledgeClient
 
 conversation_manager = ConversationManager()
 
@@ -11,7 +12,7 @@ class LLMService:
 
     def __init__(self):
         self.provider = ProviderFactory.get_provider()
-
+        self.knowledge_client = KnowledgeClient()
 
     async def generate(self, message: str, conversation_id: str):
 
@@ -22,16 +23,29 @@ class LLMService:
         # Get previous history first
         history = conversation_manager.get_messages(conversation_id)
 
+        knowledge = await self.knowledge_client.search(
+            query=message,
+            limit=5,
+        )
+
+        context = "\n\n".join(
+            chunk["text"]
+            for chunk in knowledge
+        )
+
         # Build prompt WITHOUT current message in history
         prompt = PromptBuilder.build(
             user_message=message,
-            history=history
+            history=history,
+            context=context,
         )
 
         logger.info("Sending request to Ollama")
-        print(prompt)
+        
+
         response = await self.provider.generate(prompt)
         logger.info("Response received from Ollama")
+
         # Save conversation after successful response
         conversation_manager.add_message(
             conversation_id,
@@ -61,9 +75,27 @@ class LLMService:
 
         history = conversation_manager.get_messages(conversation_id)
 
+        knowledge = await self.knowledge_client.search(
+            query=message,
+            limit=5,
+        )
+        logger.info(f"Knowledge results: {knowledge}")
+
+        context =(
+            "\n\n".join(
+                chunk["text"]
+                for chunk in knowledge
+            )
+            if knowledge
+            else "No relevant knowledge was found."
+        )
+        logger.info(f"Knowledge context:\n{context}")
+
+
         prompt = PromptBuilder.build(
             user_message=message,
-            history=history
+            history=history,
+            context=context,
         )
 
         async for chunk in self.provider.stream_generate(prompt):

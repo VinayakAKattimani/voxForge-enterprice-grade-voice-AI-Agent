@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     OLLAMA_BASE_URL: str
     OLLAMA_EMBEDDING_MODEL: str
 
+    QDRANT_HOST: str
+    QDRANT_PORT: int
+    QDRANT_COLLECTION: str
+    SEARCH_SCORE_THRESHOLD: float = 0.65
+
 
     model_config = SettingsConfigDict(
         env_file=".env",

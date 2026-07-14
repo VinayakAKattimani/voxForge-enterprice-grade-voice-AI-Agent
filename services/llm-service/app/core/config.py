@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     OLLAMA_GENERATE_ENDPOINT: str
     OLLAMA_TAGS_ENDPOINT: str
     OLLAMA_MODEL: str
+    KNOWLEDGE_SERVICE_URL: str
 
     model_config = SettingsConfigDict(
         env_file=".env",

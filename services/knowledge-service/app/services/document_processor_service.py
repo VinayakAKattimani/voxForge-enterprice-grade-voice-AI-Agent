@@ -8,7 +8,8 @@ from app.services.chunk_service import ChunkService
 from app.services.chunking_service import ChunkingService
 from app.services.parser_service import ParserService
 from app.models.document_chunk import DocumentChunk
-
+from app.providers.ollama import OllamaEmbeddingProvider
+from app.providers.qdrant_provider import QdrantProvider
 
 class DocumentProcessorService:
 
@@ -18,7 +19,10 @@ class DocumentProcessorService:
         self.chunking_service = ChunkingService()
         self.chunk_service = ChunkService(db)
 
-    def process_document(
+        self.embedding_provider = OllamaEmbeddingProvider()
+        self.qdrant_provider = QdrantProvider()
+
+    async def process_document(
         self,
         document_id: UUID,
     ):
@@ -45,9 +49,24 @@ class DocumentProcessorService:
                 text
             )
 
-            self.chunk_service.save_chunks(
+            saved_chunks = self.chunk_service.save_chunks(
                 document.id,
                 chunks,
+            )
+            embeddings = []
+
+            for chunk in saved_chunks:
+                embedding = await self.embedding_provider.generate_embedding(
+                    chunk.chunk_text
+                )
+
+                embeddings.append(embedding)
+
+            self.qdrant_provider.upsert_vectors(
+                document.id,
+                [chunk.id for chunk in saved_chunks],
+                [chunk.chunk_text for chunk in saved_chunks],
+                embeddings,
             )
 
             document.status = DocumentStatus.COMPLETED

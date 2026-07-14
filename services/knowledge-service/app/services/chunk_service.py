@@ -14,7 +14,7 @@ class ChunkService:
         self,
         document_id: UUID,
         chunks: list[str],
-    ):
+    ) -> list[DocumentChunk]:
 
         # Delete existing chunks (useful if document is reprocessed)
         (
@@ -23,14 +23,19 @@ class ChunkService:
             .delete()
         )
 
-        # Save new chunks
+        saved_chunks = []
+
         for index, chunk in enumerate(chunks):
-            self.db.add(
-                DocumentChunk(
-                    document_id=document_id,
-                    chunk_index=index,
-                    chunk_text=chunk,
-                )
+
+            document_chunk = DocumentChunk(
+                document_id=document_id,
+                chunk_index=index,
+                chunk_text=chunk,
             )
 
+            self.db.add(document_chunk)
+            saved_chunks.append(document_chunk)
+
         self.db.commit()
+
+        return saved_chunks
