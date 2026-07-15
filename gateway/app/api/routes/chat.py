@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 
 router = APIRouter(
-    prefix="/conversations",
-    tags=["Conversations"],
+    prefix="/chat",
+    tags=["Chat"],
 )
 
 
@@ -10,8 +10,8 @@ router = APIRouter(
     "/{path:path}",
     methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
 )
-async def conversation_proxy(path: str):
+async def chat_proxy(path: str):
     return {
-        "service": "conversation",
+        "service": "llm",
         "path": path,
     }
