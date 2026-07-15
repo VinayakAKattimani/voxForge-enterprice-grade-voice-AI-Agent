@@ -13,7 +13,7 @@ router = APIRouter(
 @router.post("/login")
 async def login(request: Request):
     return await proxy_request(
-        service_name="auth-service",
+        service_name="auth",
         request=request,
         target_path="/auth/login",
         

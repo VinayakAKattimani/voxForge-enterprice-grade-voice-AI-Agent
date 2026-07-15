@@ -5,15 +5,17 @@ import json
 from app.services.http_client import get_http_client
 from app.services.registry import SERVICE_REGISTRY
 
-print("LOADING PROXY FROM:", __file__)
+
 async def proxy_request(
     service_name: str,
     request: Request,
     target_path: str,
-    body: None,
+    body=None,
 ):
     print("LOADED PROXY VERSION WITH DEFAULT BODY")
     base_url = SERVICE_REGISTRY.get(service_name)
+    print("Service Name:", service_name)
+    print("Base URL:", base_url)
 
     if base_url is None:
         raise HTTPException(
@@ -44,6 +46,7 @@ async def proxy_request(
 
     print("Forwarding headers:")
     print(headers)
+    print("Forwarding to:", url)
 
     response = await get_http_client().request(
         method=request.method,
