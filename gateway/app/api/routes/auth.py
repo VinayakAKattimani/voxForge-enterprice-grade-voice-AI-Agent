@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Request
 
 from app.services.proxy import proxy_request
+import inspect
 
+print(inspect.signature(proxy_request))
 router = APIRouter(
     prefix="/auth",
     tags=["Authentication"],
@@ -11,9 +13,10 @@ router = APIRouter(
 @router.post("/login")
 async def login(request: Request):
     return await proxy_request(
-        service_name="auth",
+        service_name="auth-service",
         request=request,
         target_path="/auth/login",
+        
     )
 
 

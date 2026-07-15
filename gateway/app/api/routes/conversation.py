@@ -1,4 +1,5 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
+from app.services.proxy import proxy_request
 
 router = APIRouter(
     prefix="/conversations",
@@ -6,12 +7,10 @@ router = APIRouter(
 )
 
 
-@router.api_route(
-    "/{path:path}",
-    methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-)
-async def conversation_proxy(path: str):
-    return {
-        "service": "conversation",
-        "path": path,
-    }
+@router.post("/")
+async def create_conversation(request: Request):
+    return await proxy_request(
+        service_name="conversation",
+        request=request,
+        target_path="/conversations",
+    )
