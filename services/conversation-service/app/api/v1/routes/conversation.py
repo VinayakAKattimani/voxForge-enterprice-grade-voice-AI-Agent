@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header
 
 from app.dependencies.conversation import get_conversation_service
 from app.schemas.conversation import (
@@ -22,12 +22,12 @@ router = APIRouter(
 )
 def create_conversation(
     conversation: ConversationCreate,
+    x_user_id: str = Header(...),
     service: ConversationService = Depends(
         get_conversation_service
     ),
 ):
-    # TODO: Replace with authenticated user ID
-    user_id = UUID("00000000-0000-0000-0000-000000000001")
+    user_id = UUID(x_user_id)
 
     return service.create_conversation(
         user_id=user_id,
@@ -55,12 +55,12 @@ def get_conversation(
     response_model=list[ConversationResponse],
 )
 def get_user_conversations(
+    x_user_id: str = Header(...),
     service: ConversationService = Depends(
         get_conversation_service
     ),
 ):
-    # TODO: Replace with authenticated user ID
-    user_id = UUID("00000000-0000-0000-0000-000000000001")
+    user_id = UUID(x_user_id)
 
     return service.get_user_conversations(
         user_id,

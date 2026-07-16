@@ -45,7 +45,8 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
 
             # Store user info for later use
             request.state.user_id = payload["sub"]
-            request.state.email = payload["email"]
+            request.state.email = payload.get("email")
+            request.state.role = payload.get("role")
 
         except JWTError:
             return JSONResponse(
