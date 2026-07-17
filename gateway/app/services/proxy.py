@@ -30,6 +30,8 @@ async def proxy_request(
 
     if body is None:
         body = await request.body()
+        print("RAW BODY:", body)
+        print("CONTENT-TYPE:", request.headers.get("content-type"))
     else:
         body = json.dumps(body)
 

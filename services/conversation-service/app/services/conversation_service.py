@@ -1,5 +1,5 @@
 from uuid import UUID
-
+from fastapi import HTTPException
 from app.repositories.conversation_repository import ConversationRepository
 from app.schemas.conversation import (
     ConversationCreate,
@@ -26,10 +26,25 @@ class ConversationService:
     def get_conversation(
         self,
         conversation_id: UUID,
+        user_id: UUID,
     ):
-        return self.conversation_repository.get_by_id(
+        conversation = self.conversation_repository.get_by_id(
             conversation_id
         )
+
+        if not conversation:
+            raise HTTPException(
+                status_code=404,
+                detail="Conversation not found",
+            )
+
+        if conversation.user_id != user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Access denied",
+            )
+
+        return conversation
 
     def get_user_conversations(
         self,
@@ -42,6 +57,7 @@ class ConversationService:
     def update_conversation(
         self,
         conversation_id: UUID,
+        user_id: UUID,
         title: str,
     ):
         conversation = self.conversation_repository.get_by_id(
@@ -52,6 +68,12 @@ class ConversationService:
             raise HTTPException(
                 status_code=404,
                 detail="Conversation not found",
+            )
+        
+        if conversation.user_id != user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Access denied",
             )
 
         return self.conversation_repository.update(

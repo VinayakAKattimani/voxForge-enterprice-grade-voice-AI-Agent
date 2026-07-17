@@ -41,12 +41,14 @@ def create_conversation(
 )
 def get_conversation(
     conversation_id: UUID,
+    x_user_id: str = Header(...),
     service: ConversationService = Depends(
         get_conversation_service
     ),
 ):
     return service.get_conversation(
-        conversation_id,
+        conversation_id=conversation_id,
+        user_id=UUID(x_user_id),
     )
 
 
@@ -73,12 +75,14 @@ def get_user_conversations(
 def update_conversation(
     conversation_id: UUID,
     request: ConversationUpdate,
+    x_user_id: str = Header(...),
     service: ConversationService = Depends(
         get_conversation_service
     ),
-    ):
+):
     return service.update_conversation(
-        conversation_id,
-        request.title,
+        conversation_id=conversation_id,
+        user_id=UUID(x_user_id),
+        title=request.title,
     )
 
