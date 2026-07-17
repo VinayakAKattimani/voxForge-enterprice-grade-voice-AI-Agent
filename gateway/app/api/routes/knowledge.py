@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Request
+
 from app.services.proxy import proxy_request
+
 
 router = APIRouter(
     prefix="/knowledge",
@@ -7,10 +9,34 @@ router = APIRouter(
 )
 
 
-@router.post("/search")
-async def search(request: Request):
+@router.post("/documents")
+async def upload_document(
+    request: Request,
+):
     return await proxy_request(
         service_name="knowledge",
         request=request,
-        target_path="/knowledge/search",
+        target_path="/api/v1/knowledge/documents",
+    )
+
+
+@router.get("/documents")
+async def get_documents(
+    request: Request,
+):
+    return await proxy_request(
+        service_name="knowledge",
+        request=request,
+        target_path="/api/v1/knowledge/documents",
+    )
+
+
+@router.post("/search")
+async def search(
+    request: Request,
+):
+    return await proxy_request(
+        service_name="knowledge",
+        request=request,
+        target_path="/api/v1/knowledge/search",
     )

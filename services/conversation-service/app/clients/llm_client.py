@@ -17,20 +17,22 @@ class LLMClient:
         request: LLMChatRequest,
         request_id: str | None = None,
     ) -> LLMChatResponse:
+        
         try:
             logger.info(
                 "calling_llm_service",
                 conversation_id=request.conversation_id,
             )
 
-            response = httpx.post(
-                f"{settings.LLM_SERVICE_URL}/api/v1/chat",
-                json=request.model_dump(),
-                headers={
-                    "X-Request-ID": request_id
-                } if request_id else {},
-                timeout=60,
-            )
+            with httpx.Client(timeout=60) as client:
+                response = httpx.post(
+                    f"{settings.LLM_SERVICE_URL}/api/v1/chat",
+                    json=request.model_dump(mode="json"),
+                    headers={
+                        "X-Request-ID": request_id
+                    } if request_id else {},
+                    timeout=60,
+                )
 
             response.raise_for_status()
             logger.info(
@@ -54,7 +56,7 @@ class LLMClient:
         except httpx.HTTPStatusError as error:
             raise HTTPException(
                 status_code=error.response.status_code,
-                detail="LLM service request failed",
+                detail=error.response.text,
             )
 
         except httpx.TimeoutException:

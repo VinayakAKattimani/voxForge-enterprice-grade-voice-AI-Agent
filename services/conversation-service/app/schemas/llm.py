@@ -1,11 +1,11 @@
 from pydantic import BaseModel
+from app.schemas.message import Message
+from uuid import UUID
 
 
 class LLMChatRequest(BaseModel):
-    message: str
-    conversation_id: str
-    user_id: str | None = None
-    stream: bool = False
+    conversation_id: UUID
+    messages: list[Message]
 
 
 class LLMChatResponse(BaseModel):

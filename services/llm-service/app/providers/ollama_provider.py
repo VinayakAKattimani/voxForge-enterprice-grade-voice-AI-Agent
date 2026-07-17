@@ -43,7 +43,7 @@ class OllamaProvider(LLMProvider):
             httpx.HTTPStatusError,
         ) as e:
             logger.error(f"Ollama request failed: {e}")
-            self.handle_http_exception(e)
+            self._handle_http_exception(e)
         
 
     async def get_models(self) -> list[dict]:
@@ -111,4 +111,4 @@ class OllamaProvider(LLMProvider):
             httpx.TimeoutException,
             httpx.HTTPStatusError,
         ) as e:
-            self.handle_http_exception(e)
+            self._handle_http_exception(e)

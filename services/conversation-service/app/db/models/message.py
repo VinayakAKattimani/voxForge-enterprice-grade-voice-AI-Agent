@@ -26,7 +26,7 @@ class Message(Base):
     )
 
     role: Mapped[MessageRole] = mapped_column(
-    Enum(MessageRole),
+    Enum(MessageRole, name="message_role"),
     nullable=False,
     )
 

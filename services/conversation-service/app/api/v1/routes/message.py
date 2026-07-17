@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Header
 
 from app.dependencies.message import get_message_service
 from app.schemas.message import MessageCreate, MessageResponse
@@ -20,10 +20,12 @@ def create_message(
     conversation_id: UUID,
     request: MessageCreate,
     http_request: Request,
+    x_user_id: str = Header(...),
     service: MessageService = Depends(get_message_service),
 ):
     return service.create_message(
         conversation_id=conversation_id,
+        user_id=UUID(x_user_id),
         message=request,
         request_id=http_request.state.request_id,
     )
@@ -34,8 +36,10 @@ def create_message(
 )
 def get_messages(
     conversation_id: UUID,
+    x_user_id: str = Header(...),
     service: MessageService = Depends(get_message_service),
 ):
     return service.get_messages(
-        conversation_id
+        conversation_id=conversation_id,
+        user_id=UUID(x_user_id),
     )

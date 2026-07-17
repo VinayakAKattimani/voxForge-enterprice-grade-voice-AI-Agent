@@ -1,11 +1,9 @@
-from app.prompts.prompt_builder import PromptBuilder
-from app.schemas.response import ChatResponse
-from app.providers.factory import ProviderFactory
-from app.services.conversation_manager import ConversationManager
-from app.core.logger import logger
 from app.clients.knowledge_client import KnowledgeClient
-
-conversation_manager = ConversationManager()
+from app.core.logger import logger
+from app.prompts.prompt_builder import PromptBuilder
+from app.providers.factory import ProviderFactory
+from app.schemas.chat import ChatMessage
+from app.schemas.response import ChatResponse
 
 
 class LLMService:
@@ -14,17 +12,28 @@ class LLMService:
         self.provider = ProviderFactory.get_provider()
         self.knowledge_client = KnowledgeClient()
 
-    async def generate(self, message: str, conversation_id: str):
+    async def generate(
+        self,
+        conversation_id: str,
+        messages: list[ChatMessage],
+    ):
 
         logger.info(
             f"Generating response for conversation_id={conversation_id}"
         )
 
-        # Get previous history first
-        history = conversation_manager.get_messages(conversation_id)
+        history = [
+            {
+                "role": msg.role.value,
+                "content": msg.content,
+            }
+            for msg in messages[:-1]
+        ]
+
+        user_message = messages[-1].content
 
         knowledge = await self.knowledge_client.search(
-            query=message,
+            query=user_message,
             limit=5,
         )
 
@@ -33,55 +42,51 @@ class LLMService:
             for chunk in knowledge
         )
 
-        # Build prompt WITHOUT current message in history
         prompt = PromptBuilder.build(
-            user_message=message,
+            user_message=user_message,
             history=history,
             context=context,
         )
 
         logger.info("Sending request to Ollama")
-        
 
         response = await self.provider.generate(prompt)
+
         logger.info("Response received from Ollama")
 
-        # Save conversation after successful response
-        conversation_manager.add_message(
-            conversation_id,
-            "user",
-            message
-        )
-
-        conversation_manager.add_message(
-            conversation_id,
-            "assistant",
-            response
-        )
-        logger.info(f"Conversation updated: {conversation_id}")
         return ChatResponse(response=response)
-    
+
     async def get_models(self):
         return await self.provider.get_models()
-    
-    async def stream_generate(self, message: str, conversation_id: str):
-        conversation_manager.add_message(
-            conversation_id=conversation_id,
-            role="user",
-            content=message
+
+    async def stream_generate(
+        self,
+        conversation_id: str,
+        messages: list[ChatMessage],
+    ):
+
+        logger.info(
+            f"Streaming response for conversation_id={conversation_id}"
         )
 
-        logger.info(f"Streaming response for conversation_id={conversation_id}")
+        history = [
+            {
+                "role": msg.role.value,
+                "content": msg.content,
+            }
+            for msg in messages[:-1]
+        ]
 
-        history = conversation_manager.get_messages(conversation_id)
+        user_message = messages[-1].content
 
         knowledge = await self.knowledge_client.search(
-            query=message,
+            query=user_message,
             limit=5,
         )
+
         logger.info(f"Knowledge results: {knowledge}")
 
-        context =(
+        context = (
             "\n\n".join(
                 chunk["text"]
                 for chunk in knowledge
@@ -89,11 +94,11 @@ class LLMService:
             if knowledge
             else "No relevant knowledge was found."
         )
+
         logger.info(f"Knowledge context:\n{context}")
 
-
         prompt = PromptBuilder.build(
-            user_message=message,
+            user_message=user_message,
             history=history,
             context=context,
         )

@@ -12,7 +12,6 @@ async def proxy_request(
     target_path: str,
     body=None,
 ):
-    print("LOADED PROXY VERSION WITH DEFAULT BODY")
     base_url = SERVICE_REGISTRY.get(service_name)
     print("Service Name:", service_name)
     print("Base URL:", base_url)
@@ -50,12 +49,24 @@ async def proxy_request(
     print(headers)
     print("Forwarding to:", url)
 
-    response = await get_http_client().request(
-        method=request.method,
-        url=url,
-        headers=headers,
-        content=body,
-    )
+    try:
+        response = await get_http_client().request(
+            method=request.method,
+            url=url,
+            headers=headers,
+            content=body,
+            timeout=60.0,
+        )
+
+    except httpx.ConnectError:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "success": False,
+                "service": service_name,
+                "error": "Service unavailable"
+            }
+        )
 
     excluded_headers = {
         "content-length",

@@ -1,21 +1,34 @@
-from datetime import datetime
+from enum import Enum
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-from app.utils.enums import MessageRole
+
+class MessageRole(str, Enum):
+    USER = "user"
+    ASSISTANT = "assistant"
+    SYSTEM = "system"
 
 
+# Incoming API request
 class MessageCreate(BaseModel):
     role: MessageRole
     content: str
 
 
+# Sending messages to LLM service
+class Message(BaseModel):
+    role: MessageRole
+    content: str
+
+
+# API response
 class MessageResponse(BaseModel):
     id: UUID
     conversation_id: UUID
     role: MessageRole
     content: str
-    created_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True
+    )
