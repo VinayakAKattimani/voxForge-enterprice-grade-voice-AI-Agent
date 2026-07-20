@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     QDRANT_COLLECTION: str
     SEARCH_SCORE_THRESHOLD: float = 0.65
 
+    KAFKA_BOOTSTRAP_SERVERS: str
+
+    KAFKA_BOOTSTRAP_SERVERS: str
+
 
     model_config = SettingsConfigDict(
         env_file=".env",

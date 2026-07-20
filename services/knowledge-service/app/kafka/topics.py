@@ -1,0 +1,1 @@
+DOCUMENT_UPLOADED = "knowledge.document.uploaded"

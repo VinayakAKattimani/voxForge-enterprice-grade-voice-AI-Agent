@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from sqlalchemy.orm import Session
-
+import traceback
 from app.models.document import Document
 from app.models.enums import DocumentStatus
 from app.services.chunk_service import ChunkService
@@ -73,11 +73,16 @@ class DocumentProcessorService:
 
             self.db.commit()
 
-        except Exception:
+        except Exception as e:
+            print("=" * 80)
+            print("DOCUMENT PROCESSING FAILED")
+            print(e)
+            traceback.print_exc()
+            print("=" * 80)
+
             self.db.rollback()
 
             document.status = DocumentStatus.FAILED
-
             self.db.commit()
 
             raise 

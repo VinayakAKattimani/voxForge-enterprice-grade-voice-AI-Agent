@@ -18,6 +18,9 @@ from app.schemas.document_stats import DocumentStatsResponse
 from app.schemas.documents import DocumentResponse
 from app.services.document_processor_service import DocumentProcessorService
 from app.services.document_service import DocumentService
+from app.kafka.producer import publish
+from app.kafka.topics import DOCUMENT_UPLOADED
+
 
 router = APIRouter(
     prefix="/documents",
@@ -38,13 +41,15 @@ async def upload_document(
     document_service = DocumentService(db)
 
     document = await document_service.upload_document(file)
-
-    processor = DocumentProcessorService(db)
-
-    background_tasks.add_task(
-        processor.process_document,
-        document.id,
+    await publish(
+        DOCUMENT_UPLOADED,
+        {
+            "document_id": str(document.id),
+            "filename": document.filename,
+            "content_type": document.content_type,
+        },
     )
+
 
     return document
 

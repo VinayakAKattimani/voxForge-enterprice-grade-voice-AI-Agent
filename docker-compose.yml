@@ -99,6 +99,7 @@ services:
 
     depends_on:
       - qdrant
+      - kafka
 
     restart: unless-stopped
 
@@ -117,6 +118,56 @@ services:
 
     volumes:
       - qdrant_data:/qdrant/storage
+
+    restart: unless-stopped
+
+    networks:
+      - voxforge-network
+
+
+  kafka:
+    image: apache/kafka:3.9.1
+
+    container_name: voxforge-kafka
+
+    ports:
+      - "9092:9092"
+
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+
+    restart: unless-stopped
+
+    networks:
+      - voxforge-network
+
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+
+    container_name: voxforge-kafka-ui
+
+    ports:
+      - "8085:8080"
+
+    environment:
+      KAFKA_CLUSTERS_0_NAME: voxforge
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+
+    depends_on:
+      - kafka
 
     restart: unless-stopped
 
