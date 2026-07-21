@@ -21,9 +21,12 @@ async def start_consumer():
     await consumer.start()
 
     print("Kafka Consumer Started")
+    print("Subscribed to:", DOCUMENT_UPLOADED)
 
     try:
-
+        
+        print("Waiting for messages...")
+        
         async for message in consumer:
 
             print("=" * 50)
