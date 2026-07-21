@@ -14,11 +14,16 @@ async def start_consumer():
     consumer = AIOKafkaConsumer(
         DOCUMENT_UPLOADED,
         bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
-        group_id="knowledge-service",
+        group_id="knowledge-service-v2",
+        auto_offset_reset="earliest",
         value_deserializer=lambda m: json.loads(m.decode()),
     )
 
     await consumer.start()
+
+    await consumer.seek_to_beginning()
+
+    print("Assignment:", consumer.assignment())
 
     print("Kafka Consumer Started")
     print("Subscribed to:", DOCUMENT_UPLOADED)
@@ -26,7 +31,7 @@ async def start_consumer():
     try:
         
         print("Waiting for messages...")
-        
+
         async for message in consumer:
 
             print("=" * 50)
