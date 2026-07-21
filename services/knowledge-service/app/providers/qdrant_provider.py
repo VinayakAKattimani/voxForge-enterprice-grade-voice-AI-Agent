@@ -71,13 +71,27 @@ class QdrantProvider:
         query_embedding: list[float],
         limit: int = 5,
         document_id: UUID | None = None,
-
     ):
+
+        query_filter = None
+
+        if document_id:
+            query_filter = Filter(
+                must=[
+                    FieldCondition(
+                        key="document_id",
+                        match=MatchValue(
+                            value=str(document_id),
+                        ),
+                    )
+                ]
+            )
 
         results = self.client.query_points(
             collection_name=settings.QDRANT_COLLECTION,
             query=query_embedding,
             limit=limit,
+            query_filter=query_filter,
         )
 
         return results.points

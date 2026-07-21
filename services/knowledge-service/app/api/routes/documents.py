@@ -20,6 +20,12 @@ from app.services.document_processor_service import DocumentProcessorService
 from app.services.document_service import DocumentService
 from app.kafka.producer import publish
 from app.kafka.topics import DOCUMENT_UPLOADED
+from app.schemas.search import (
+    SearchRequest,
+    SearchResultResponse,
+)
+from app.services.search_service import SearchService
+
 
 
 router = APIRouter(
@@ -52,6 +58,20 @@ async def upload_document(
 
 
     return document
+
+@router.post(
+    "/search",
+    response_model=list[SearchResultResponse],
+)
+async def search_documents(
+    request: SearchRequest,
+):
+
+    search_service = SearchService()
+
+    return await search_service.search(
+        request
+    )
 
 
 @router.get(
@@ -159,3 +179,4 @@ def delete_document(
     return document_service.delete_document(
         document_id
     )
+
