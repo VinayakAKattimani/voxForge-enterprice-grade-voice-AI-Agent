@@ -1,4 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pathlib import Path
+from pydantic import computed_field
 
 
 class Settings(BaseSettings):
@@ -12,7 +14,16 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str
 
-    DATABASE_URL: str
+    @computed_field
+    @property
+    def DATABASE_URL(self) -> str:
+        return (
+            f"postgresql://{self.POSTGRES_USER}:"
+            f"{self.POSTGRES_PASSWORD}@"
+            f"{self.POSTGRES_SERVER}:"
+            f"{self.POSTGRES_PORT}/"
+            f"{self.POSTGRES_DB}"
+        )
 
     UPLOAD_DIR: str
     MAX_FILE_SIZE_MB: int
@@ -38,5 +49,12 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+
+
+print("=" * 80)
+print("Current working directory:", Path.cwd())
+print("Expected .env:", Path(".env").resolve())
+print("Exists:", Path(".env").exists())
+print("=" * 80)
 
 settings = Settings()

@@ -14,7 +14,7 @@ class OllamaProvider(LLMProvider):
             "prompt": message,
             "stream": False,
             "options": {
-                "temperature": 0
+                "temperature": 0.1
             }
         }
 

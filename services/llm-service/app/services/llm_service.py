@@ -4,13 +4,14 @@ from app.prompts.prompt_builder import PromptBuilder
 from app.providers.factory import ProviderFactory
 from app.schemas.chat import ChatMessage
 from app.schemas.response import ChatResponse
-
+from app.langchain.chat_chain import ChatChain
 
 class LLMService:
 
     def __init__(self):
         self.provider = ProviderFactory.get_provider()
         self.knowledge_client = KnowledgeClient()
+        self.chat_chain = ChatChain()
 
     async def generate(
         self,
@@ -36,11 +37,23 @@ class LLMService:
             query=user_message,
             limit=5,
         )
+        print("=" * 60)
+        print("KNOWLEDGE RECEIVED:")
+        print(knowledge)
+        print("=" * 60)
 
-        context = "\n\n".join(
-            chunk["text"]
-            for chunk in knowledge
-        )
+        context = ""
+
+        if knowledge:
+            context = "\n\n".join(
+                chunk["text"]
+                for chunk in knowledge
+            )
+
+        print("=" * 60)
+        print("CONTEXT SENT TO LLM:")
+        print(context[:1000])
+        print("=" * 60)
 
         prompt = PromptBuilder.build(
             user_message=user_message,
@@ -48,9 +61,14 @@ class LLMService:
             context=context,
         )
 
+        print("=" * 60)
+        print("FINAL PROMPT:")
+        print(prompt[:2000])   # first 2000 chars
+        print("=" * 60)
+
         logger.info("Sending request to Ollama")
 
-        response = await self.provider.generate(prompt)
+        response = await self.chat_chain.generate(prompt)
 
         logger.info("Response received from Ollama")
 
@@ -83,6 +101,10 @@ class LLMService:
             query=user_message,
             limit=5,
         )
+        print("=" * 60)
+        print("KNOWLEDGE RECEIVED:")
+        print(knowledge)
+        print("=" * 60)
 
         logger.info(f"Knowledge results: {knowledge}")
 
@@ -94,6 +116,11 @@ class LLMService:
             if knowledge
             else "No relevant knowledge was found."
         )
+
+        print("=" * 60)
+        print("CONTEXT SENT TO LLM:")
+        print(context[:1000])   # print first 1000 chars
+        print("=" * 60)
 
         logger.info(f"Knowledge context:\n{context}")
 

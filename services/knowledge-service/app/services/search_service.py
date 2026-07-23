@@ -26,10 +26,19 @@ class SearchService:
             limit=request.limit,
             document_id=request.document_id,
         )
+        print("RESULTS:", results)
+        print("POINTS COUNT:", len(results))
 
         response = []
 
         for point in results:
+
+            print("=" * 50)
+            print("Payload:", point.payload)
+            print("Chunk ID Type:", type(point.payload["chunk_id"]))
+            print("Document ID Type:", type(point.payload["document_id"]))
+            print("Score:", point.score)
+            print("=" * 50)
 
             response.append(
                 SearchResultResponse(
@@ -39,5 +48,7 @@ class SearchService:
                     score=point.score,
                 )
             )
+        print("Response Size:", len(response))
+        print(response)
 
         return response

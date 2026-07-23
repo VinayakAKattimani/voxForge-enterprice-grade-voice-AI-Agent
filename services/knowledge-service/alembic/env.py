@@ -15,6 +15,9 @@ config.set_main_option(
     "sqlalchemy.url",
     settings.DATABASE_URL
 )
+print("=" * 80)
+print(settings.DATABASE_URL)
+print("=" * 80)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

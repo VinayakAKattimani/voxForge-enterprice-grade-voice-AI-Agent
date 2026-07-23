@@ -60,6 +60,8 @@ class QdrantProvider:
                     },
                 )
             )
+        
+        print(f"UPSERTING {len(points)} POINTS")
 
         self.client.upsert(
             collection_name=settings.QDRANT_COLLECTION,
