@@ -2,7 +2,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
 from app.core.config import settings
 from uuid import UUID
-
+from datetime import datetime
 
 class QdrantProvider:
 
@@ -36,6 +36,8 @@ class QdrantProvider:
     def upsert_vectors(
         self,
         document_id: UUID,
+        filename: str,
+        title: str,
         chunk_ids: list[UUID],
         chunks: list[str],
         embeddings: list[list[float]],
@@ -43,10 +45,12 @@ class QdrantProvider:
 
         points = []
 
-        for chunk_id, chunk, embedding in zip(
-            chunk_ids,
-            chunks,
-            embeddings,
+        for index, (chunk_id, chunk, embedding) in enumerate(
+            zip(
+                chunk_ids,
+                chunks,
+                embeddings,
+            )
         ):
 
             points.append(
@@ -56,7 +60,11 @@ class QdrantProvider:
                     payload={
                         "document_id": str(document_id),
                         "chunk_id": str(chunk_id),
+                        "filename": filename,
+                        "title": title,
                         "text": chunk,
+                        "uploaded_at": datetime.utcnow().isoformat(),
+
                     },
                 )
             )
@@ -97,3 +105,21 @@ class QdrantProvider:
         )
 
         return results.points
+
+    def delete_document_vectors(
+        self,
+        document_id: UUID,
+    ):
+        self.client.delete(
+            collection_name=settings.QDRANT_COLLECTION,
+            points_selector=Filter(
+                must=[
+                    ieldCondition(
+                        key="document_id",
+                        match=MatchValue(
+                            value=str(document_id),
+                        ),
+                    )
+                ]
+            ),
+        )

@@ -63,10 +63,12 @@ class DocumentProcessorService:
                 embeddings.append(embedding)
 
             self.qdrant_provider.upsert_vectors(
-                document.id,
-                [chunk.id for chunk in saved_chunks],
-                [chunk.chunk_text for chunk in saved_chunks],
-                embeddings,
+                document_id=document.id,
+                filename=document.filename,
+                title=document.title,
+                chunk_ids=[chunk.id for chunk in saved_chunks],
+                chunks=[chunk.chunk_text for chunk in saved_chunks],
+                embeddings=embeddings,
             )
 
             document.status = DocumentStatus.COMPLETED
