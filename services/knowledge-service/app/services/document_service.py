@@ -10,6 +10,7 @@ from app.models.enums import DocumentStatus
 from app.services.storage_service import StorageService
 from app.services.document_processor_service import DocumentProcessorService
 from app.models.document_chunk import DocumentChunk
+from app.utils.file_hash import generate_file_hash
 
 class DocumentService:
 
@@ -31,6 +32,25 @@ class DocumentService:
             file,
         )
 
+        file_hash = generate_file_hash(file_path)
+        print(f"Generated hash: {file_hash}")
+        
+
+        existing_document = (
+            self.db.query(Document)
+            .filter(Document.content_hash == file_hash)
+            .first()
+        )
+
+        if existing_document:
+
+            self.storage_service.delete_file(file_path)
+
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Document already exists.",
+            )
+
         document = Document(
             id=document_id,
             title=Path(file.filename).stem,
@@ -38,14 +58,18 @@ class DocumentService:
             file_path=file_path,
             content_type=file.content_type,
             file_size=Path(file_path).stat().st_size,
+            content_hash=file_hash,
             status=DocumentStatus.PENDING,
-        )
+        ) 
+
+        print("Document.content_hash before add:", document.content_hash)      
 
         try:
             self.db.add(document)
             self.db.commit()
             self.db.refresh(document)
-
+            
+            print("Document.content_hash before add:", document.content_hash)
 
 
         except Exception:

@@ -40,8 +40,6 @@ class Settings(BaseSettings):
 
     KAFKA_BOOTSTRAP_SERVERS: str
 
-    KAFKA_BOOTSTRAP_SERVERS: str
-
 
     model_config = SettingsConfigDict(
         env_file=".env",

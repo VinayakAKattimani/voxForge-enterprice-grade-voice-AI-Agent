@@ -21,6 +21,13 @@ class Document(Base, TimestampMixin):
         nullable=False
     )
 
+    content_hash: Mapped[str] = mapped_column(
+        String(64),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+
     filename: Mapped[str] = mapped_column(
         String(255),
         nullable=False
@@ -40,13 +47,6 @@ class Document(Base, TimestampMixin):
         nullable=False,
     )
 
-    content_hash: Mapped[str] = mapped_column(
-        String(64),
-        unique=True,
-        nullable=False,
-        index=True,
-    )
-
     status: Mapped[DocumentStatus] = mapped_column(
         Enum(DocumentStatus),
         default=DocumentStatus.PENDING,
@@ -58,3 +58,5 @@ class Document(Base, TimestampMixin):
         back_populates="document",
         cascade="all, delete-orphan",
     )
+
+   
