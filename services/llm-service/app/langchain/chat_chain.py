@@ -1,6 +1,5 @@
 from langchain_ollama import ChatOllama
-from langchain_core.messages import HumanMessage
-
+from langchain_core.messages import HumanMessage, SystemMessage
 from app.core.config import settings
 
 
@@ -16,12 +15,14 @@ class ChatChain:
 
     async def generate(
         self,
-        prompt: str,
+        system_prompt: str,
+        user_message: str,
     ) -> str:
 
         response = await self.llm.ainvoke(
             [
-                HumanMessage(content=prompt)
+                 SystemMessage(content=system_prompt),
+                 HumanMessage(content="Answer the question."),
             ]
         )
 

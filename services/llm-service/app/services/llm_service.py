@@ -5,6 +5,7 @@ from app.providers.factory import ProviderFactory
 from app.schemas.chat import ChatMessage
 from app.schemas.response import ChatResponse
 from app.langchain.chat_chain import ChatChain
+from app.utils.query_preprocessor import QueryPreprocessor
 
 class LLMService:
 
@@ -33,10 +34,16 @@ class LLMService:
 
         user_message = messages[-1].content
 
+        search_query = QueryPreprocessor.preprocess(user_message)
+
         knowledge = await self.knowledge_client.search(
-            query=user_message,
+            query=search_query,
             limit=5,
         )
+
+        print(f"Original Query : {user_message}")
+        print(f"Search Query   : {search_query}")
+
         print("=" * 60)
         print("KNOWLEDGE RECEIVED:")
         print(knowledge)
@@ -55,20 +62,29 @@ class LLMService:
         print(context[:1000])
         print("=" * 60)
 
-        prompt = PromptBuilder.build(
-            user_message=user_message,
+        system_prompt = PromptBuilder.build(
             history=history,
             context=context,
+            user_message=user_message,
         )
 
+
         print("=" * 60)
-        print("FINAL PROMPT:")
-        print(prompt[:2000])   # first 2000 chars
+        print("SYSTEM PROMPT:")
+        print(system_prompt)
+        print("=" * 60)
+
+        print("=" * 60)
+        print("USER MESSAGE:")
+        print(user_message)
         print("=" * 60)
 
         logger.info("Sending request to Ollama")
 
-        response = await self.chat_chain.generate(prompt)
+        response = await self.chat_chain.generate(
+            system_prompt=system_prompt,
+            user_message=user_message,
+        )
 
         logger.info("Response received from Ollama")
 
