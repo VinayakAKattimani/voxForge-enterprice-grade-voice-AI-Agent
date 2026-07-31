@@ -6,6 +6,7 @@ from fastapi import (
     File,
     HTTPException,
     UploadFile,
+    BackgroundTasks
 )
 from sqlalchemy.orm import Session
 
@@ -25,6 +26,7 @@ from app.utils.enums import TranscriptionStatus
 from uuid import uuid4
 from pathlib import Path
 from app.core.logger import logger
+from app.schemas.job import JobResponse
 
 
 router = APIRouter(
@@ -38,9 +40,11 @@ service = TranscriptionService()
 
 @router.post(
     "/",
-    response_model=TranscriptionResponse
+    response_model=JobResponse,
+    status_code=202
 )
 def upload_audio(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
@@ -92,16 +96,20 @@ def upload_audio(
         job
     )
 
-    service.transcribe(
-        db,
-        job
+    background_tasks.add_task(
+        service.transcribe,
+        job.id
     )
 
     logger.info(
         f"Created transcription job: {job.id}"
     )
 
-    return job
+    return JobResponse(
+        job_id=job.id,
+        status=job.status,
+        message="Transcription started successfully."
+    )
 
 
 @router.get(

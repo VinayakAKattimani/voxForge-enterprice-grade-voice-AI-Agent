@@ -1,14 +1,15 @@
 import time
-from pathlib import Path
 
-from sqlalchemy.orm import Session
 from faster_whisper import WhisperModel
 
-from app.models.transcription_job import TranscriptionJob
-from app.repositories.transcription_repository import TranscriptionRepository
-from app.utils.enums import TranscriptionStatus
 from app.core.config import settings
 from app.core.logger import logger
+from app.db.session import SessionLocal
+from app.repositories.transcription_repository import (
+    TranscriptionRepository,
+)
+from app.utils.enums import TranscriptionStatus
+
 
 class TranscriptionService:
 
@@ -21,65 +22,74 @@ class TranscriptionService:
             compute_type=settings.WHISPER_COMPUTE_TYPE
         )
 
-
     def transcribe(
         self,
-        db: Session,
-        job: TranscriptionJob
+        job_id: int
     ):
-        logger.info(
-            f"Starting transcription for job_id={job.id}"
-        )
 
-        start_time = time.time()
+        db = SessionLocal()
 
         try:
-
-            self.repository.update_status(
-                db,
-                job.id,
-                TranscriptionStatus.PROCESSING
+            job = self.repository.get_by_id(
+                db=db,
+                job_id=job_id
             )
 
+            if not job:
+                logger.warning(
+                    f"Transcription job not found: job_id={job_id}"
+                )
+                return
+
+            logger.info(
+                f"Starting transcription for job_id={job_id}"
+            )
+
+            self.repository.update_status(
+                db=db,
+                job_id=job.id,
+                status=TranscriptionStatus.PROCESSING
+            )
+
+            start_time = time.time()
 
             segments, info = self.model.transcribe(
                 job.file_path
             )
 
-
             transcript = " ".join(
-                segment.text
+                segment.text.strip()
                 for segment in segments
             )
-
 
             processing_time = (
                 time.time() - start_time
             ) * 1000
 
+            self.repository.complete(
+                db=db,
+                job_id=job.id,
+                transcript=transcript,
+                duration_seconds=info.duration,
+                processing_time_ms=processing_time
+            )
+
             logger.info(
                 f"Transcription completed for job_id={job.id}"
             )
 
+        except Exception as exc:
 
-            return self.repository.complete(
-                db,
-                job.id,
-                transcript,
-                info.duration,
-                processing_time
-            )
-
-
-        except Exception as e:
             logger.exception(
-                f"Transcription failed for job_id={job.id}"
+                f"Transcription failed for job_id={job_id}: {exc}"
             )
 
-            return self.repository.fail(
-                db,
-                job.id,
-                str(e)
-            )
+            if "job" in locals() and job:
+                self.repository.fail(
+                    db=db,
+                    job_id=job.id,
+                    error_message=str(exc)
+                )
 
-    
+        finally:
+            db.close()
