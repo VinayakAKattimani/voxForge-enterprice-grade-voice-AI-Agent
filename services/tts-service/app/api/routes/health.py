@@ -1,13 +1,22 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+
+from app.dependencies.services import get_tts_service
+from app.services.tts_service import TTSService
+
+router = APIRouter()
 
 
-router = APIRouter(
-    tags=["Health"]
-)
+@router.get("")
+async def health(
+    service: TTSService = Depends(get_tts_service),
+):
 
+    health = service.health()
 
-@router.get("/health")
-async def health():
     return {
-        "status": "healthy"
+        "status": "healthy",
+        "service": "tts-service",
+        "provider": health["provider"],
+        "model_loaded": health["model_loaded"],
+        "version": "1.0.0"
     }

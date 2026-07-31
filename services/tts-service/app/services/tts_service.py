@@ -24,3 +24,10 @@ class TTSService:
 
     async def get_voices(self):
         return await self.provider.get_voices()
+
+    def health(self):
+
+        return {
+            "provider": "kokoro",
+        "model_loaded": self.provider.is_ready()
+        }

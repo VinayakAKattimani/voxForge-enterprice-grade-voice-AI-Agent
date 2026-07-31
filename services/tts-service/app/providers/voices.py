@@ -24,3 +24,9 @@ VOICES = [
         "description": "American male voice"
     }
 ]
+
+def voice_exists(voice_id: str) -> bool:
+    return any(
+        voice["id"] == voice_id
+        for voice in VOICES
+    )
