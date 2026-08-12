@@ -7,6 +7,8 @@ from app.api.routes.knowledge import router as knowledge_router
 from app.api.routes.message import router as message_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.llm import router as llm_router
+from app.api.routes.stt import router as stt_router
+from app.api.routes.tts import router as tts_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -16,3 +18,5 @@ api_router.include_router(conversation_router)
 api_router.include_router(knowledge_router)
 api_router.include_router(message_router)
 api_router.include_router(llm_router)
+api_router.include_router(stt_router)
+api_router.include_router(tts_router)

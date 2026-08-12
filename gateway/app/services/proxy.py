@@ -1,4 +1,4 @@
-from fastapi import HTTPException, Request, Response
+from fastapi import HTTPException, Request, Response, UploadFile
 import httpx
 import json
 
@@ -10,9 +10,12 @@ async def proxy_request(
     service_name: str,
     request: Request,
     target_path: str,
-    body=None,
+    multipart_file: UploadFile | None = None,
+    multipart_data: dict | None = None,
+    body: dict | None = None,
 ):
     base_url = SERVICE_REGISTRY.get(service_name)
+
     print("Service Name:", service_name)
     print("Base URL:", base_url)
 
@@ -27,15 +30,11 @@ async def proxy_request(
     if request.url.query:
         url += f"?{request.url.query}"
 
-    if body is None:
-        body = await request.body()
-        print("RAW BODY:", body)
-        print("CONTENT-TYPE:", request.headers.get("content-type"))
-    else:
-        body = json.dumps(body)
-
     headers = dict(request.headers)
+
     headers.pop("host", None)
+    headers.pop("content-length", None)
+
     headers.pop("X-User-ID", None)
     headers.pop("X-User-Email", None)
 
@@ -45,18 +44,77 @@ async def proxy_request(
     if hasattr(request.state, "email"):
         headers["X-User-Email"] = request.state.email
 
-    print("Forwarding headers:")
-    print(headers)
+    print("Forwarding headers:", headers)
     print("Forwarding to:", url)
 
     try:
-        response = await get_http_client().request(
-            method=request.method,
-            url=url,
-            headers=headers,
-            content=body,
-            timeout=60.0,
-        )
+
+        # ==================================================
+        # MULTIPART FILE UPLOAD
+        # ==================================================
+
+        if multipart_file is not None:
+
+            file_content = await multipart_file.read()
+
+            files = {
+                "file": (
+                    multipart_file.filename,
+                    file_content,
+                    multipart_file.content_type,
+                )
+            }
+
+            data = multipart_data or {}
+
+            headers.pop("content-type", None)
+
+            response = await get_http_client().request(
+                method=request.method,
+                url=url,
+                headers=headers,
+                files=files,
+                data=data,
+                timeout=60.0,
+            )
+
+        # ==================================================
+        # JSON BODY
+        # ==================================================
+
+        elif body is not None:
+
+            headers["content-type"] = "application/json"
+
+            response = await get_http_client().request(
+                method=request.method,
+                url=url,
+                headers=headers,
+                content=json.dumps(body),
+                timeout=60.0,
+            )
+
+        # ==================================================
+        # NORMAL REQUEST
+        # ==================================================
+
+        else:
+
+            raw_body = await request.body()
+
+            print("RAW BODY:", raw_body)
+            print(
+                "CONTENT-TYPE:",
+                request.headers.get("content-type"),
+            )
+
+            response = await get_http_client().request(
+                method=request.method,
+                url=url,
+                headers=headers,
+                content=raw_body,
+                timeout=60.0,
+            )
 
     except httpx.ConnectError:
         raise HTTPException(
@@ -64,8 +122,8 @@ async def proxy_request(
             detail={
                 "success": False,
                 "service": service_name,
-                "error": "Service unavailable"
-            }
+                "error": "Service unavailable",
+            },
         )
 
     excluded_headers = {

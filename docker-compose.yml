@@ -149,6 +149,49 @@ services:
     volumes:
       - ./services/knowledge-service:/app
 
+  stt-service:
+    build:
+      context: ./services/stt-service
+      dockerfile: Dockerfile
+
+    container_name: voxforge-stt-service
+
+    ports:
+      - "8006:8006"
+
+    env_file:
+      - ./services/stt-service/.env
+
+    restart: unless-stopped
+
+    networks:
+      - voxforge-network
+
+    volumes:
+      - ./services/stt-service:/app
+
+  tts-service:
+  
+    build:
+      context: ./services/tts-service
+      dockerfile: Dockerfile
+
+    container_name: voxforge-tts-service
+
+    ports:
+      - "8005:8005"
+
+    env_file:
+      - ./services/tts-service/.env
+
+    restart: unless-stopped
+
+    networks:
+      - voxforge-network
+
+    volumes:
+      - ./services/tts-service:/app
+
 
   qdrant:
     image: qdrant/qdrant:latest
@@ -226,3 +269,4 @@ networks:
 volumes:
   postgres_data:
   qdrant_data:
+

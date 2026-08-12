@@ -144,39 +144,25 @@ def get_transcription(
     return job
 
 
-@router.delete(
-    "/{job_id}"
-)
+@router.delete("/{job_id}")
 def delete_transcription(
     job_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    logger.info(
-        f"Deleting transcription job: {job.id}"
-    )
-    job = repository.get_by_id(
-        db=db,
-        job_id=job_id
-    )
+    job = repository.get_by_id(db, job_id)
 
     if not job:
         raise HTTPException(
             status_code=404,
-            detail="Transcription job not found."
+            detail="Transcription job not found",
         )
 
-    file_path = Path(job.file_path)
+    logger.info(f"Deleting transcription job: {job.id}")
 
-    if file_path.exists():
-        file_path.unlink()
-
-    repository.delete(
-        db=db,
-        job=job
-    )
+    repository.delete(db, job)
 
     return {
-        "message": "Transcription deleted successfully."
+        "success": True,
+        "message": "Transcription deleted successfully",
+        "job_id": job_id,
     }
-
-

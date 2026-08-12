@@ -6,4 +6,6 @@ SERVICE_REGISTRY = {
     "conversation": settings.conversation_service_url,
     "knowledge": settings.knowledge_service_url,
     "llm": settings.llm_service_url,
+    "tts": settings.tts_service_url,
+    "stt": settings.stt_service_url,
 }

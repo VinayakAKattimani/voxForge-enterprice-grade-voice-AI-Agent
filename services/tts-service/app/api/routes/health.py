@@ -6,11 +6,10 @@ from app.services.tts_service import TTSService
 router = APIRouter()
 
 
-@router.get("")
+@router.get("/health")
 async def health(
     service: TTSService = Depends(get_tts_service),
 ):
-
     health = service.health()
 
     return {
@@ -18,5 +17,5 @@ async def health(
         "service": "tts-service",
         "provider": health["provider"],
         "model_loaded": health["model_loaded"],
-        "version": "1.0.0"
+        "version": "1.0.0",
     }

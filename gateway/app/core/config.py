@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     jwt_secret_key: str
     jwt_algorithm: str
 
+    tts_service_url: str
+    stt_service_url: str
+
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=False
