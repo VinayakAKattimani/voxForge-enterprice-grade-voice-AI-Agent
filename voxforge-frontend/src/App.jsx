@@ -12,14 +12,22 @@ import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 
 function RequireAuth({ children }) {
-  const { user } = useAuth();
-  if (!user) return <Navigate to="/login" replace />;
+  const { isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
   return children;
 }
 
 function RedirectIfAuthed({ children }) {
-  const { user } = useAuth();
-  if (user) return <Navigate to="/dashboard" replace />;
+  const { isAuthenticated } = useAuth();
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return children;
 }
 

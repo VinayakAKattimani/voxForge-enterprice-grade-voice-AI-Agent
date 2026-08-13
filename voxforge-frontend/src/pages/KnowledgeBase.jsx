@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { fetchKnowledgeDocuments } from '../data/mockData';
+import {
+  fetchKnowledgeDocuments,
+  uploadKnowledgeDocument,
+} from '../api/knowledgeApi';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -37,26 +40,26 @@ export default function KnowledgeBase() {
     return docs.filter((d) => d.name.toLowerCase().includes(query.toLowerCase()));
   }, [docs, query]);
 
-  const addFiles = (fileList) => {
+  const addFiles = async (fileList) => {
     const files = Array.from(fileList || []);
-    if (!files.length) return;
-    const newDocs = files.map((f, i) => ({
-      id: `d_new_${Date.now()}_${i}`,
-      name: f.name,
-      type: (f.name.split('.').pop() || 'file').toUpperCase(),
-      sizeKb: Math.round(f.size / 1024) || 12,
-      status: 'Processing',
-      uploadedAt: new Date().toISOString(),
-      chunks: 0,
-    }));
-    setDocs((prev) => [...newDocs, ...(prev || [])]);
 
-    // Simulate processing completing after a short delay.
-    newDocs.forEach((d) => {
-      setTimeout(() => {
-        setDocs((prev) => prev.map((p) => (p.id === d.id ? { ...p, status: 'Indexed', chunks: Math.floor(Math.random() * 120) + 8 } : p)));
-      }, 2200 + Math.random() * 1200);
-    });
+    if (!files.length) return;
+
+    for (const file of files) {
+      try {
+        await uploadKnowledgeDocument(file);
+      } catch (error) {
+        console.error(`Failed to upload ${file.name}:`, error);
+      }
+    }
+
+    // Refresh from backend after uploads
+    try {
+      const documents = await fetchKnowledgeDocuments();
+      setDocs(documents);
+    } catch (error) {
+      console.error('Failed to refresh documents:', error);
+    }
   };
 
   const confirmDelete = () => {

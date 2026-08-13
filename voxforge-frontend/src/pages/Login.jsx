@@ -8,7 +8,7 @@ import { IconMail, IconLock } from '../components/ui/icons';
 import './auth.css';
 
 export default function Login() {
-  const { login, loading, loginAsDemo } = useAuth();
+  const { login, loading } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('ananya.rao@northfieldbank.com');
   const [password, setPassword] = useState('');
@@ -54,9 +54,6 @@ export default function Login() {
             </div>
 
             <Button type="submit" fullWidth loading={loading}>Sign in</Button>
-            <Button type="button" variant="secondary" fullWidth onClick={() => { loginAsDemo(); navigate('/dashboard'); }}>
-              Continue with demo workspace
-            </Button>
           </form>
 
           <p className="auth-alt-action">

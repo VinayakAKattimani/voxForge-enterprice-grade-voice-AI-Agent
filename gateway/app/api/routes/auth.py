@@ -35,3 +35,11 @@ async def refresh(request: Request):
         request=request,
         target_path="/auth/refresh",
     )
+
+@router.post("/logout")
+async def logout(request: Request):
+    return await proxy_request(
+        service_name="auth",
+        request=request,
+        target_path="/auth/logout",
+    )
