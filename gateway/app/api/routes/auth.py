@@ -43,3 +43,11 @@ async def logout(request: Request):
         request=request,
         target_path="/auth/logout",
     )
+
+@router.get("/user/me")
+async def get_current_user(request: Request):
+    return await proxy_request(
+        service_name="auth",
+        request=request,
+        target_path="/user/me",
+    )

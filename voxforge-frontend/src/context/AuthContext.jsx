@@ -3,17 +3,18 @@ import {
   useContext,
   useState,
   useCallback,
+  useEffect,
 } from 'react';
 
 import {
   loginRequest,
   registerRequest,
   logoutRequest,
+  refreshRequest,
+  getCurrentUserRequest,
 } from '../api/authApi';
 
-
 const AuthContext = createContext(null);
-
 
 export function AuthProvider({ children }) {
 
@@ -30,7 +31,6 @@ export function AuthProvider({ children }) {
       return storedUser
         ? JSON.parse(storedUser)
         : null;
-
     } catch {
       return null;
     }
@@ -57,21 +57,18 @@ export function AuthProvider({ children }) {
 
 
   // --------------------------------------------------
-  // PERSIST AUTH TOKENS
+  // PERSIST AUTH
   // --------------------------------------------------
 
   const persistAuth = useCallback(
-    (authResponse, fallbackUser = null) => {
+    (authResponse) => {
 
       const {
         access_token,
         refresh_token,
       } = authResponse;
 
-
-      // Access token
       if (access_token) {
-
         window.sessionStorage.setItem(
           'voxforge-access-token',
           access_token
@@ -80,37 +77,148 @@ export function AuthProvider({ children }) {
         setIsAuthenticated(true);
       }
 
-
-      // Refresh token
       if (refresh_token) {
-
         window.sessionStorage.setItem(
           'voxforge-refresh-token',
           refresh_token
         );
       }
-
-
-      /*
-       * Currently the auth-service login response
-       * only contains tokens.
-       *
-       * Once user-service /me is implemented,
-       * we will populate the complete user object.
-       */
-
-      if (fallbackUser) {
-
-        setUser(fallbackUser);
-
-        window.sessionStorage.setItem(
-          'voxforge-user',
-          JSON.stringify(fallbackUser)
-        );
-      }
     },
     []
   );
+
+
+  // --------------------------------------------------
+  // GET CURRENT USER
+  // --------------------------------------------------
+
+  const fetchCurrentUser = useCallback(
+  async () => {
+    try {
+      console.log('🔵 FETCHING CURRENT USER');
+
+      const currentUser = await getCurrentUserRequest();
+
+      console.log(
+        '🟢 CURRENT USER FROM API:',
+        currentUser
+      );
+
+      const normalizedUser = {
+        id: currentUser.id,
+
+        name: [
+          currentUser.first_name,
+          currentUser.last_name,
+        ]
+          .filter(Boolean)
+          .join(' '),
+
+        email: currentUser.email,
+
+        role: currentUser.role_id,
+
+        avatarInitials:
+          `${currentUser.first_name?.[0] || ''}${currentUser.last_name?.[0] || ''}`
+            .toUpperCase(),
+
+        org: 'VoxForge',
+
+        plan: 'Free',
+
+        isActive: currentUser.is_active,
+
+        isVerified: currentUser.is_verified,
+
+        createdAt: currentUser.created_at,
+
+        updatedAt: currentUser.updated_at,
+      };
+
+      console.log(
+        '🟢 NORMALIZED USER:',
+        normalizedUser
+      );
+
+      setUser(normalizedUser);
+
+      window.sessionStorage.setItem(
+        'voxforge-user',
+        JSON.stringify(normalizedUser)
+      );
+
+      return normalizedUser;
+
+    } catch (error) {
+
+      console.error(
+        '🔴 FAILED TO FETCH CURRENT USER:',
+        error
+      );
+
+      throw error;
+    }
+  },
+  []
+);
+
+
+  // --------------------------------------------------
+  // RESTORE SESSION
+  // --------------------------------------------------
+
+  useEffect(() => {
+  const accessToken =
+    window.sessionStorage.getItem(
+      'voxforge-access-token'
+    );
+
+  const refreshToken =
+    window.sessionStorage.getItem(
+      'voxforge-refresh-token'
+    );
+
+  if (!accessToken && !refreshToken) {
+    return;
+  }
+
+  const restoreSession = async () => {
+    try {
+      console.log('🔵 RESTORING SESSION');
+
+      await fetchCurrentUser();
+
+      setIsAuthenticated(true);
+
+      console.log('🟢 SESSION RESTORED');
+
+    } catch (error) {
+
+      console.error(
+        '🔴 SESSION RESTORE FAILED:',
+        error
+      );
+
+      setUser(null);
+      setIsAuthenticated(false);
+
+      window.sessionStorage.removeItem(
+        'voxforge-user'
+      );
+
+      window.sessionStorage.removeItem(
+        'voxforge-access-token'
+      );
+
+      window.sessionStorage.removeItem(
+        'voxforge-refresh-token'
+      );
+    }
+  };
+
+  restoreSession();
+
+}, [fetchCurrentUser]);
 
 
   // --------------------------------------------------
@@ -125,16 +233,30 @@ export function AuthProvider({ children }) {
 
       try {
 
+        console.log('🔵 LOGIN');
+
         const response = await loginRequest(
           email,
           password
         );
 
+        console.log(
+          '🟢 LOGIN SUCCESS:',
+          response
+        );
+
         persistAuth(response);
+
+        await fetchCurrentUser();
 
         return response;
 
       } catch (e) {
+
+        console.error(
+          '🔴 LOGIN FAILED:',
+          e
+        );
 
         setError(e.message);
 
@@ -145,7 +267,7 @@ export function AuthProvider({ children }) {
         setLoading(false);
       }
     },
-    [persistAuth]
+    [persistAuth, fetchCurrentUser]
   );
 
 
@@ -165,7 +287,18 @@ export function AuthProvider({ children }) {
           payload
         );
 
-        persistAuth(response);
+        /*
+         * If registration returns tokens,
+         * persist them and fetch the real user.
+         */
+
+        if (response.access_token) {
+
+          persistAuth(response);
+
+          await fetchCurrentUser();
+
+        }
 
         return response;
 
@@ -178,6 +311,66 @@ export function AuthProvider({ children }) {
       } finally {
 
         setLoading(false);
+      }
+    },
+    [persistAuth, fetchCurrentUser]
+  );
+
+
+  // --------------------------------------------------
+  // REFRESH TOKEN
+  // --------------------------------------------------
+
+  const testRefresh = useCallback(
+    async () => {
+
+      const refreshToken =
+        window.sessionStorage.getItem(
+          'voxforge-refresh-token'
+        );
+
+      console.log(
+        '🔵 REFRESH TOKEN:',
+        refreshToken
+      );
+
+      if (!refreshToken) {
+
+        console.log(
+          '❌ NO REFRESH TOKEN'
+        );
+
+        return;
+      }
+
+      try {
+
+        console.log(
+          '🔵 CALLING REFRESH API'
+        );
+
+        const response =
+          await refreshRequest(
+            refreshToken
+          );
+
+        console.log(
+          '🟢 REFRESH SUCCESS:',
+          response
+        );
+
+        persistAuth(response);
+
+        console.log(
+          '🟢 TOKENS UPDATED'
+        );
+
+      } catch (error) {
+
+        console.error(
+          '🔴 REFRESH FAILED:',
+          error
+        );
       }
     },
     [persistAuth]
@@ -196,13 +389,7 @@ export function AuthProvider({ children }) {
           'voxforge-refresh-token'
         );
 
-
       try {
-
-        /*
-         * Tell Auth Service to invalidate
-         * the refresh token.
-         */
 
         if (refreshToken) {
 
@@ -213,12 +400,6 @@ export function AuthProvider({ children }) {
 
       } catch (error) {
 
-        /*
-         * Even if backend logout fails,
-         * local authentication must still
-         * be removed.
-         */
-
         console.error(
           'Logout API failed:',
           error
@@ -226,11 +407,9 @@ export function AuthProvider({ children }) {
 
       } finally {
 
-        // Clear React authentication state
         setUser(null);
         setIsAuthenticated(false);
 
-        // Clear stored authentication data
         window.sessionStorage.removeItem(
           'voxforge-user'
         );
@@ -262,6 +441,8 @@ export function AuthProvider({ children }) {
         login,
         register,
         logout,
+        testRefresh,
+        fetchCurrentUser,
       }}
     >
       {children}

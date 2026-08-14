@@ -20,7 +20,7 @@ export async function registerRequest(payload) {
 }
 
 
-export async function refreshTokenRequest(refreshToken) {
+export async function refreshRequest(refreshToken) {
   return apiRequest('/api/v1/auth/refresh', {
     method: 'POST',
     body: JSON.stringify({
@@ -36,5 +36,12 @@ export async function logoutRequest(refreshToken) {
     body: JSON.stringify({
       refresh_token: refreshToken,
     }),
+  });
+}
+
+
+export async function getCurrentUserRequest() {
+  return apiRequest('/api/v1/auth/user/me', {
+    method: 'GET',
   });
 }

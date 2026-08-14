@@ -13,13 +13,23 @@ export default function Register() {
   const [form, setForm] = useState({ name: '', org: '', email: '', password: '' });
   const [error, setError] = useState(null);
 
+  const nameParts = form.name.trim().split(/\s+/);
+
+  const first_name = nameParts[0] || '';
+  const last_name = nameParts.slice(1).join(' ') || '';
+
   const update = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     try {
-      await register(form);
+      await register({
+        first_name,
+        last_name,
+        email: form.email,
+        password: form.password,
+      });
       navigate('/dashboard');
     } catch (err) {
       setError(err.message);

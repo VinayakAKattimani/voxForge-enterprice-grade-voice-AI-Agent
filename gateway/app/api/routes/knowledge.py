@@ -39,3 +39,14 @@ async def search(
         request=request,
         target_path="/api/v1/search",
     )
+
+@router.delete("/documents/{document_id}")
+async def delete_document(
+    document_id: str,
+    request: Request,
+):
+    return await proxy_request(
+        service_name="knowledge",
+        request=request,
+        target_path=f"/api/v1/documents/{document_id}",
+    )

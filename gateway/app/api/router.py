@@ -5,7 +5,6 @@ from app.api.routes.conversation import router as conversation_router
 from app.api.routes.health import router as health_router
 from app.api.routes.knowledge import router as knowledge_router
 from app.api.routes.message import router as message_router
-from app.api.routes.auth import router as auth_router
 from app.api.routes.llm import router as llm_router
 from app.api.routes.stt import router as stt_router
 from app.api.routes.tts import router as tts_router
