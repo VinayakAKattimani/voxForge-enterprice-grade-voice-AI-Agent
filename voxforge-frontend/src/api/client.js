@@ -153,27 +153,54 @@ export async function apiRequest(path, options = {}) {
   // RESPONSE
   // --------------------------------------------------
 
-  let data = null;
+  const contentType =
+    response.headers.get('content-type') || '';
 
-  try {
+  if (contentType.includes('application/json')) {
+    const data = await response.json();
 
-    data = await response.json();
+    if (!response.ok) {
+      const message =
+        data?.detail ||
+        data?.message ||
+        `Request failed with status ${response.status}`;
 
-  } catch {
-    // Non-JSON response
+      throw new Error(message);
+    }
+
+    return data;
   }
 
+  // --------------------------------------------------
+  // AUDIO / FILE RESPONSE
+  // --------------------------------------------------
+
+  if (
+    contentType.includes('audio/') ||
+    contentType.includes('application/octet-stream')
+  ) {
+    const blob = await response.blob();
+
+    if (!response.ok) {
+      throw new Error(
+        `Request failed with status ${response.status}`
+      );
+    }
+
+    return blob;
+  }
+
+  // --------------------------------------------------
+  // TEXT RESPONSE
+  // --------------------------------------------------
+
+  const text = await response.text();
 
   if (!response.ok) {
-
-    const message =
-      data?.detail ||
-      data?.message ||
-      `Request failed with status ${response.status}`;
-
-    throw new Error(message);
+    throw new Error(
+      text || `Request failed with status ${response.status}`
+    );
   }
 
-
-  return data;
+  return text;
 }

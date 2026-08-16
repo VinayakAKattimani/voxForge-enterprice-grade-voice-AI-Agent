@@ -11,12 +11,15 @@ from app.services.storage_service import StorageService
 from app.services.document_processor_service import DocumentProcessorService
 from app.models.document_chunk import DocumentChunk
 from app.utils.file_hash import generate_file_hash
+from app.providers.qdrant_provider import QdrantProvider
+
 
 class DocumentService:
 
     def __init__(self, db: Session):
         self.db = db
         self.storage_service = StorageService()
+        self.qdrant_provider = QdrantProvider()
 
     async def upload_document(
         self,
@@ -118,6 +121,7 @@ class DocumentService:
         self,
         document_id: UUID,
     ) -> dict[str, str]:
+
         document = (
             self.db.query(Document)
             .filter(Document.id == document_id)
@@ -131,23 +135,42 @@ class DocumentService:
             )
 
         try:
+
+            # 1. Delete vectors from Qdrant
+            self.qdrant_provider.delete_document_vectors(
+                document_id
+            )
+
+            # 2. Delete chunks from PostgreSQL
+            self.db.query(DocumentChunk).filter(
+                DocumentChunk.document_id == document_id
+            ).delete()
+
+            # 3. Delete physical file
             self.storage_service.delete_file(
                 document.file_path
             )
 
+            # 4. Delete document metadata
             self.db.delete(document)
+
             self.db.commit()
 
-        except Exception:
+        except Exception as e:
+
             self.db.rollback()
 
+            print(
+                f"Document deletion failed: {e}"
+            )
+
             raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete document.",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to delete document.",
             )
 
         return {
-            "message": "Document deleted successfully"
+        "message": "Document deleted successfully"
         }
     
     def download_document(

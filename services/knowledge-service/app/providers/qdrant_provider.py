@@ -114,7 +114,7 @@ class QdrantProvider:
             collection_name=settings.QDRANT_COLLECTION,
             points_selector=Filter(
                 must=[
-                    ieldCondition(
+                    FieldCondition(
                         key="document_id",
                         match=MatchValue(
                             value=str(document_id),
@@ -122,4 +122,6 @@ class QdrantProvider:
                     )
                 ]
             ),
-        )
+         )
+
+        print(f"Deleted Qdrant vectors for document: {document_id}")

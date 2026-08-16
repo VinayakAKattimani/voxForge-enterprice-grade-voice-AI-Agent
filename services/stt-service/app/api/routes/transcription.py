@@ -52,10 +52,14 @@ def upload_audio(
         f"Received upload: {file.filename}"
     )
     # Validate MIME type
-    if file.content_type not in settings.ALLOWED_AUDIO_TYPES.split(","):
+    allowed_audio_types = settings.ALLOWED_AUDIO_TYPES.split(",")
+
+    base_content_type = file.content_type.split(";")[0]
+
+    if base_content_type not in allowed_audio_types:
         raise HTTPException(
             status_code=400,
-            detail="Unsupported audio format."
+            detail=f"Unsupported audio format: {file.content_type}"
         )
 
     # Read uploaded file

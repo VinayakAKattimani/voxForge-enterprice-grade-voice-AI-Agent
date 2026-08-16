@@ -49,6 +49,15 @@ class DocumentProcessorService:
                 text
             )
 
+            print("=" * 80)
+            print(f"TOTAL CHUNKS: {len(chunks)}")
+
+            for index, chunk in enumerate(chunks):
+                print("=" * 80)
+                print(f"CHUNK {index}")
+                print(chunk)
+
+
             saved_chunks = self.chunk_service.save_chunks(
                 document.id,
                 chunks,

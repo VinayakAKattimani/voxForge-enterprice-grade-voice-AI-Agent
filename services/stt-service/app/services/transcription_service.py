@@ -16,18 +16,24 @@ class TranscriptionService:
     def __init__(self):
         self.repository = TranscriptionRepository()
 
+        logger.info(
+            f"Loading Whisper model: {settings.WHISPER_MODEL}"
+        )
+
         self.model = WhisperModel(
             settings.WHISPER_MODEL,
             device=settings.WHISPER_DEVICE,
-            compute_type=settings.WHISPER_COMPUTE_TYPE
+            compute_type=settings.WHISPER_COMPUTE_TYPE,
         )
+
+        logger.info("Whisper model loaded successfully")
 
     def transcribe(
         self,
         job_id: int
     ):
-
         db = SessionLocal()
+        job = None
 
         try:
             job = self.repository.get_by_id(
@@ -53,18 +59,137 @@ class TranscriptionService:
 
             start_time = time.time()
 
-            segments, info = self.model.transcribe(
-                job.file_path
+            logger.info(
+                f"Transcribing file: {job.file_path}"
             )
 
-            transcript = " ".join(
-                segment.text.strip()
-                for segment in segments
+            segments, info = self.model.transcribe(
+                job.file_path,
+
+                # --------------------------------------------------
+                # LANGUAGE
+                # --------------------------------------------------
+                # Our current MVP is English-first.
+                # Explicitly specifying English avoids unnecessary
+                # language detection on short microphone recordings.
+                language="en",
+
+                # --------------------------------------------------
+                # BEAM SEARCH
+                # --------------------------------------------------
+                # Higher beam size generally improves accuracy at
+                # the cost of some inference time.
+                beam_size=5,
+
+                # --------------------------------------------------
+                # TEMPERATURE
+                # --------------------------------------------------
+                # Start deterministic for normal speech.
+                temperature=0.0,
+
+                # --------------------------------------------------
+                # VAD
+                # --------------------------------------------------
+                # Ignore silence/background noise.
+                vad_filter=True,
+
+                vad_parameters={
+                    "min_silence_duration_ms": 500,
+                },
+
+                # --------------------------------------------------
+                # CONDITIONING
+                # --------------------------------------------------
+                # Helps Whisper use previous text context between
+                # segments, while still resetting appropriately.
+                condition_on_previous_text=True,
+
+                # --------------------------------------------------
+                # HALLUCINATION CONTROL
+                # --------------------------------------------------
+                # Avoid aggressively accepting extremely low
+                # probability segments.
+                no_speech_threshold=0.6,
+
+                log_prob_threshold=-1.0,
+
+                compression_ratio_threshold=2.4,
             )
+
+            # ------------------------------------------------------
+            # BUILD TRANSCRIPT
+            # ------------------------------------------------------
+
+            transcript_parts = []
+
+            for segment in segments:
+
+                text = segment.text.strip()
+
+                if not text:
+                    continue
+
+                logger.info(
+                    f"STT SEGMENT [{segment.start:.2f}s - "
+                    f"{segment.end:.2f}s]: {text}"
+                )
+
+                transcript_parts.append(text)
+
+            transcript = " ".join(
+                transcript_parts
+            ).strip()
 
             processing_time = (
                 time.time() - start_time
             ) * 1000
+
+            logger.info(
+                f"STT RESULT job_id={job.id}: "
+                f"'{transcript}'"
+            )
+
+            logger.info(
+                f"STT detected language: {info.language}"
+            )
+
+            logger.info(
+                f"STT language probability: "
+                f"{info.language_probability:.4f}"
+            )
+
+            logger.info(
+                f"STT duration: {info.duration:.2f}s"
+            )
+
+            logger.info(
+                f"STT processing time: "
+                f"{processing_time:.2f}ms"
+            )
+
+            # ------------------------------------------------------
+            # EMPTY TRANSCRIPT
+            # ------------------------------------------------------
+
+            if not transcript:
+
+                logger.warning(
+                    f"No speech detected for job_id={job.id}"
+                )
+
+                self.repository.complete(
+                    db=db,
+                    job_id=job.id,
+                    transcript="",
+                    duration_seconds=info.duration,
+                    processing_time_ms=processing_time
+                )
+
+                return
+
+            # ------------------------------------------------------
+            # COMPLETE JOB
+            # ------------------------------------------------------
 
             self.repository.complete(
                 db=db,
@@ -81,10 +206,11 @@ class TranscriptionService:
         except Exception as exc:
 
             logger.exception(
-                f"Transcription failed for job_id={job_id}: {exc}"
+                f"Transcription failed for "
+                f"job_id={job_id}: {exc}"
             )
 
-            if "job" in locals() and job:
+            if job:
                 self.repository.fail(
                     db=db,
                     job_id=job.id,
