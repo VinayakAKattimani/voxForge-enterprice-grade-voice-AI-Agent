@@ -97,6 +97,9 @@ class QdrantProvider:
                 ]
             )
 
+        print("DOCUMENT FILTER:", document_id)
+        print("QUERY FILTER:", query_filter)
+
         results = self.client.query_points(
             collection_name=settings.QDRANT_COLLECTION,
             query=query_embedding,
