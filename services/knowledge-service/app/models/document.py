@@ -1,10 +1,9 @@
-from sqlalchemy import String, Enum
+from sqlalchemy import Boolean, String, Enum, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from uuid import UUID, uuid4
 
 from app.models.base import Base, TimestampMixin
 from app.models.enums import DocumentStatus
-from sqlalchemy import Uuid
 
 
 class Document(Base, TimestampMixin):
@@ -14,6 +13,12 @@ class Document(Base, TimestampMixin):
         Uuid,
         primary_key=True,
         default=uuid4
+    )
+
+    owner_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        nullable=False,
+        index=True,
     )
 
     title: Mapped[str] = mapped_column(
@@ -53,10 +58,18 @@ class Document(Base, TimestampMixin):
         nullable=False,
     )
 
+    is_public: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
+
     chunks = relationship(
         "DocumentChunk",
         back_populates="document",
         cascade="all, delete-orphan",
     )
+
+
 
    

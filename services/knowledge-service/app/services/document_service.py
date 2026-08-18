@@ -24,6 +24,7 @@ class DocumentService:
     async def upload_document(
         self,
         file: UploadFile,
+        owner_id: UUID,
     ) -> Document:
 
         self._validate_file(file)
@@ -56,6 +57,7 @@ class DocumentService:
 
         document = Document(
             id=document_id,
+            owner_id=owner_id,
             title=Path(file.filename).stem,
             filename=file.filename,
             file_path=file_path,
@@ -96,8 +98,17 @@ class DocumentService:
                 detail="Unsupported file type.",
             )
         
-    def get_documents(self) -> list[Document]:
-        return self.db.query(Document).all()
+    def get_documents(
+        self,
+        owner_id: UUID,
+    ) -> list[Document]:
+        return (
+            self.db.query(Document)
+            .filter(
+                Document.owner_id == owner_id
+            )
+            .all()
+        )   
     
     def get_document(
         self,
@@ -271,3 +282,34 @@ class DocumentService:
 
             "total_chunks": self.db.query(DocumentChunk).count(),
         }
+
+
+    def update_visibility(
+        self,
+        document_id: UUID,
+        is_public: bool,
+    ) -> Document:
+
+        document = (
+            self.db.query(Document)
+            .filter(Document.id == document_id)
+            .first()
+        )
+
+        if not document:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document not found",
+            )   
+
+        document.is_public = is_public
+
+        self.db.commit()
+        self.db.refresh(document)
+
+        self.qdrant_provider.update_document_visibility(
+            document_id=document.id,
+            is_public=is_public,
+        )
+
+        return document 

@@ -5,6 +5,7 @@ class SearchRequest(BaseModel):
     query: str
     limit: int = 5
     document_id: UUID | None = None
+    is_public: bool | None = None
 
 class SearchResultResponse(BaseModel):
     chunk_id: UUID

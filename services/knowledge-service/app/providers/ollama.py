@@ -11,10 +11,10 @@ class OllamaEmbeddingProvider(BaseEmbeddingProvider):
         text: str,
     ) -> list[float]:
 
-        async with AsyncClient() as client:
-            
+        async with AsyncClient(timeout=30.0) as client:
+
             print("OLLAMA URL:", settings.OLLAMA_BASE_URL)
-            
+
             response = await client.post(
                 f"{settings.OLLAMA_BASE_URL}/api/embeddings",
                 json={

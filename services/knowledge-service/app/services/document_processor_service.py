@@ -73,8 +73,10 @@ class DocumentProcessorService:
 
             self.qdrant_provider.upsert_vectors(
                 document_id=document.id,
+                owner_id=document.owner_id,
                 filename=document.filename,
                 title=document.title,
+                is_public=document.is_public,
                 chunk_ids=[chunk.id for chunk in saved_chunks],
                 chunks=[chunk.chunk_text for chunk in saved_chunks],
                 embeddings=embeddings,
@@ -103,6 +105,12 @@ class DocumentProcessorService:
         document_id: UUID,
     ):
 
+        # 1. Delete vectors from Qdrant
+        self.qdrant_provider.delete_document_vectors(
+            document_id
+        )
+
+        # 2. Delete chunks from PostgreSQL
         (
             self.db.query(DocumentChunk)
             .filter(
@@ -111,4 +119,4 @@ class DocumentProcessorService:
             .delete()
         )
 
-        self.db.commit()
+        self.db.commit()    

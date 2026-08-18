@@ -8,12 +8,14 @@ from app.models.enums import DocumentStatus
 
 class DocumentResponse(BaseModel):
     id: UUID
+    owner_id: UUID
     title: str
     filename: str
     file_path: str
     content_type: str
     file_size: int
     status: DocumentStatus
+    is_public: bool
     created_at: datetime
     updated_at: datetime
 

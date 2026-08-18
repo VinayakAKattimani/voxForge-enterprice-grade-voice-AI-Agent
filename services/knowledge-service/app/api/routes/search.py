@@ -1,6 +1,11 @@
-from fastapi import APIRouter
+from uuid import UUID
 
-from app.schemas.search import SearchRequest, SearchResultResponse
+from fastapi import APIRouter, Header
+
+from app.schemas.search import (
+    SearchRequest,
+    SearchResultResponse,
+)
 from app.services.retrieval_service import RetrievalService
 
 
@@ -10,16 +15,19 @@ router = APIRouter(
 )
 
 
-@router.post("",  response_model=list[SearchResultResponse],)
-async def search_documents(
+@router.post(
+    "",
+    response_model=list[SearchResultResponse],
+)
+async def search(
     request: SearchRequest,
+    x_user_id: UUID = Header(...),
 ):
+    retrieval_service = RetrievalService()
 
-    service = RetrievalService()
-
-    results = await service.search(
-        request.query,
-        request.limit,
+    return await retrieval_service.search(
+        query=request.query,
+        owner_id=x_user_id,
+        limit=request.limit,
+        document_id=request.document_id,
     )
-
-    return results

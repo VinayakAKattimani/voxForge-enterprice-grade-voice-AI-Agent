@@ -6,6 +6,9 @@ from fastapi import (
     BackgroundTasks,
     Depends,
     File,
+    Header,
+    Request,
+    HTTPException,
     UploadFile,
     status,
 )
@@ -15,6 +18,7 @@ from sqlalchemy.orm import Session
 from app.dependencies.db import get_db
 from app.schemas.document_chunks import DocumentChunkResponse
 from app.schemas.document_stats import DocumentStatsResponse
+from app.schemas.document_visibility import DocumentVisibilityUpdate
 from app.schemas.documents import DocumentResponse
 from app.services.document_processor_service import DocumentProcessorService
 from app.services.document_service import DocumentService
@@ -35,13 +39,17 @@ router = APIRouter(
     status_code=status.HTTP_201_CREATED,
 )
 async def upload_document(
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
+    x_user_id: UUID = Header(...),
     db: Session = Depends(get_db),
 ):
     document_service = DocumentService(db)
 
-    document = await document_service.upload_document(file)
+    document = await document_service.upload_document(
+        file=file,
+        owner_id=x_user_id,
+    )
+
     await publish(
         DOCUMENT_UPLOADED,
         {
@@ -50,7 +58,6 @@ async def upload_document(
             "content_type": document.content_type,
         },
     )
-
 
     return document
 
@@ -62,11 +69,23 @@ async def upload_document(
     response_model=List[DocumentResponse],
 )
 def get_documents(
+    request: Request,
     db: Session = Depends(get_db),
 ):
+    user_id = request.headers.get("X-User-ID")
+
+    if not user_id:
+        raise HTTPException(
+            status_code=401,
+            detail="User identity missing.",
+        )
+
     document_service = DocumentService(db)
 
-    return document_service.get_documents()
+    return document_service.get_documents(
+        UUID(user_id)
+    )
+
 
 
 @router.get(
@@ -161,5 +180,22 @@ def delete_document(
 
     return document_service.delete_document(
         document_id
+    )
+
+
+@router.patch(
+    "/{document_id}/visibility",
+    response_model=DocumentResponse,
+)
+def update_document_visibility(
+    document_id: UUID,
+    request: DocumentVisibilityUpdate,
+    db: Session = Depends(get_db),
+):
+    document_service = DocumentService(db)
+
+    return document_service.update_visibility(
+        document_id,
+        request.is_public,
     )
 
