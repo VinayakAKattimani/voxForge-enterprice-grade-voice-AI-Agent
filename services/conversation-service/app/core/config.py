@@ -31,6 +31,7 @@ class Settings(BaseSettings):
 
     AUTH_SERVICE_URL: str
     LLM_SERVICE_URL: str
+    KNOWLEDGE_SERVICE_URL: str
 
     LOG_LEVEL: str = "INFO"
 

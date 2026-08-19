@@ -1,23 +1,25 @@
-from app.clients.knowledge_client import KnowledgeClient
+from uuid import UUID
+
 from app.core.logger import logger
 from app.prompts.prompt_builder import PromptBuilder
 from app.providers.factory import ProviderFactory
 from app.schemas.chat import ChatMessage
 from app.schemas.response import ChatResponse
 from app.langchain.chat_chain import ChatChain
-from app.utils.query_preprocessor import QueryPreprocessor
+
 
 class LLMService:
 
     def __init__(self):
         self.provider = ProviderFactory.get_provider()
-        self.knowledge_client = KnowledgeClient()
         self.chat_chain = ChatChain()
 
     async def generate(
         self,
         conversation_id: str,
+        user_id: UUID,
         messages: list[ChatMessage],
+        context: str | None = None,
     ):
 
         logger.info(
@@ -34,50 +36,13 @@ class LLMService:
 
         user_message = messages[-1].content
 
-        search_query = QueryPreprocessor.preprocess(user_message)
-
-        knowledge = await self.knowledge_client.search(
-            query=search_query,
-            limit=5,
-        )
-
-        print(f"Original Query : {user_message}")
-        print(f"Search Query   : {search_query}")
-
-        print("=" * 60)
-        print("KNOWLEDGE RECEIVED:")
-        print(knowledge)
-        print("=" * 60)
-
-        context = ""
-
-        if knowledge:
-            context = "\n\n".join(
-                chunk["text"]
-                for chunk in knowledge
-            )
-
-        print("=" * 60)
-        print("CONTEXT SENT TO LLM:")
-        print(context[:1000])
-        print("=" * 60)
+        context = context or ""
 
         system_prompt = PromptBuilder.build(
             history=history,
             context=context,
             user_message=user_message,
         )
-
-
-        print("=" * 60)
-        print("SYSTEM PROMPT:")
-        print(system_prompt)
-        print("=" * 60)
-
-        print("=" * 60)
-        print("USER MESSAGE:")
-        print(user_message)
-        print("=" * 60)
 
         logger.info("Sending request to Ollama")
 
@@ -89,62 +54,3 @@ class LLMService:
         logger.info("Response received from Ollama")
 
         return ChatResponse(response=response)
-
-    async def get_models(self):
-        return await self.provider.get_models()
-
-    async def stream_generate(
-        self,
-        conversation_id: str,
-        messages: list[ChatMessage],
-    ):
-
-        logger.info(
-            f"Streaming response for conversation_id={conversation_id}"
-        )
-
-        history = [
-            {
-                "role": msg.role.value,
-                "content": msg.content,
-            }
-            for msg in messages[:-1]
-        ]
-
-        user_message = messages[-1].content
-
-        knowledge = await self.knowledge_client.search(
-            query=user_message,
-            limit=5,
-        )
-        print("=" * 60)
-        print("KNOWLEDGE RECEIVED:")
-        print(knowledge)
-        print("=" * 60)
-
-        logger.info(f"Knowledge results: {knowledge}")
-
-        context = (
-            "\n\n".join(
-                chunk["text"]
-                for chunk in knowledge
-            )
-            if knowledge
-            else "No relevant knowledge was found."
-        )
-
-        print("=" * 60)
-        print("CONTEXT SENT TO LLM:")
-        print(context[:1000])   # print first 1000 chars
-        print("=" * 60)
-
-        logger.info(f"Knowledge context:\n{context}")
-
-        prompt = PromptBuilder.build(
-            user_message=user_message,
-            history=history,
-            context=context,
-        )
-
-        async for chunk in self.provider.stream_generate(prompt):
-            yield chunk

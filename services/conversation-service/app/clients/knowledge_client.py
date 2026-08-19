@@ -5,33 +5,39 @@ from uuid import UUID
 from fastapi import HTTPException, status
 
 from app.core.config import settings
-from app.schemas.llm import (
-    LLMChatRequest,
-    LLMChatResponse,
+from app.schemas.knowledge import (
+    KnowledgeSearchRequest,
+    KnowledgeSearchResult,
 )
+
 
 logger = structlog.get_logger()
 
 
-class LLMClient:
+class KnowledgeClient:
 
-    def generate_response(
+    def search(
         self,
-        request: LLMChatRequest,
+        query: str,
         user_id: UUID,
         request_id: str | None = None,
-    ) -> LLMChatResponse:
+        limit: int = 5,
+    ) -> list[KnowledgeSearchResult]:
 
         try:
+
             logger.info(
-                "calling_llm_service",
-                conversation_id=request.conversation_id,
+                "calling_knowledge_service",
+                query=query,
                 user_id=str(user_id),
             )
 
             response = httpx.post(
-                f"{settings.LLM_SERVICE_URL}/api/v1/chat",
-                json=request.model_dump(mode="json"),
+                f"{settings.KNOWLEDGE_SERVICE_URL}/api/v1/search",
+                json=KnowledgeSearchRequest(
+                    query=query,
+                    limit=limit,
+                ).model_dump(mode="json"),
                 headers={
                     "X-User-ID": str(user_id),
                     **(
@@ -40,45 +46,55 @@ class LLMClient:
                         else {}
                     ),
                 },
-                timeout=60,
+                timeout=30,
             )
 
             response.raise_for_status()
 
+            results = response.json()
+
             logger.info(
-                "llm_response_received",
-                status_code=response.status_code,
+                "knowledge_response_received",
+                result_count=len(results),
             )
 
-            return LLMChatResponse.model_validate(
-                response.json()
-            )
+            return [
+                KnowledgeSearchResult.model_validate(
+                    result
+                )
+                for result in results
+            ]
 
         except httpx.ConnectError:
 
             logger.error(
-                "llm_service_unavailable"
+                "knowledge_service_unavailable"
             )
 
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="LLM service is unavailable",
+                detail="Knowledge service is unavailable",
             )
 
         except httpx.HTTPStatusError as error:
 
+            logger.error(
+                "knowledge_service_request_failed",
+                status_code=error.response.status_code,
+            )
+
             raise HTTPException(
                 status_code=error.response.status_code,
-                detail=error.response.text,
+                detail="Knowledge service request failed",
             )
 
         except httpx.TimeoutException:
 
             logger.error(
-                "llm_service_timeout"
+                "knowledge_service_timeout"
             )
 
             raise HTTPException(
                 status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-                detail="LLM service timeout",
+                detail="Knowledge service timeout",
             )

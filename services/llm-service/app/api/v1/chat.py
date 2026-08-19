@@ -1,4 +1,6 @@
-from fastapi import APIRouter
+from uuid import UUID
+
+from fastapi import APIRouter, Header
 from fastapi.responses import StreamingResponse
 
 from app.schemas.chat import ChatRequest, ChatResponse
@@ -12,22 +14,31 @@ llm_service = LLMService()
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
-
+async def chat(
+    request: ChatRequest,
+    x_user_id: UUID = Header(...),
+):
     return await llm_service.generate(
         conversation_id=request.conversation_id,
+        user_id=x_user_id,
         messages=request.messages,
+        context=request.context,
     )
 
 
 @router.post("/chat/stream")
-async def chat_stream(request: ChatRequest):
+async def chat_stream(
+    request: ChatRequest,
+    x_user_id: UUID = Header(...),
+):
 
     async def event_generator():
 
         async for chunk in llm_service.stream_generate(
             conversation_id=request.conversation_id,
+            user_id=x_user_id,
             messages=request.messages,
+            context=request.context,
         ):
 
             yield format_sse(
@@ -42,10 +53,9 @@ async def chat_stream(request: ChatRequest):
             }
         )
 
-
     return StreamingResponse(
         event_generator(),
-        media_type="text/event-stream"
+        media_type="text/event-stream",
     )
 
 
