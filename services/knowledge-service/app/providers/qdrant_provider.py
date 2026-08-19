@@ -112,12 +112,7 @@ class QdrantProvider:
 
         must_conditions = []
 
-        # ----------------------------------------------
-        # Optional document filter
-        # ----------------------------------------------
-
         if document_id:
-
             must_conditions.append(
                 FieldCondition(
                     key="document_id",
@@ -127,46 +122,34 @@ class QdrantProvider:
                 )
             )
 
-    # ----------------------------------------------
-    # Access control
-    #
-    # User can retrieve:
-    # 1. Their own documents
-    # 2. Any public document
-    #
-    # owner_id == current user
-    # OR
-    # is_public == True
-    # ----------------------------------------------
+        # ==================================================
+        # ACCESS CONTROL
+        #
+        # User can retrieve:
+        # 1. Their own documents
+        # 2. Any public document
+        # ==================================================
 
         access_filter = Filter(
             should=[
-                Filter(
-                    must=[
-                        FieldCondition(
-                            key="owner_id",
-                            match=MatchValue(
-                                value=str(owner_id),
-                            ),
-                        )
-                    ]
+                FieldCondition(
+                    key="owner_id",
+                    match=MatchValue(
+                        value=str(owner_id),
+                    ),
                 ),
-                Filter(
-                    must=[
-                        FieldCondition(
-                            key="is_public",
-                            match=MatchValue(
-                                value=True,
-                            ),
-                        )
-                    ]
+                FieldCondition(
+                    key="is_public",
+                    match=MatchValue(
+                        value=True,
+                    ),
                 ),
             ]
         )
 
-    # ----------------------------------------------
-    # Combine document filter + access control
-    # ----------------------------------------------
+        # ==================================================
+        # COMBINE FILTERS
+        # ==================================================
 
         if must_conditions:
 
