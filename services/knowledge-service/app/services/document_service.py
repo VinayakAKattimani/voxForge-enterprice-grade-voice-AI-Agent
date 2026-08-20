@@ -92,11 +92,36 @@ class DocumentService:
             for item in settings.ALLOWED_FILE_TYPES.split(",")
         }
 
-        if file.content_type not in allowed_types:
+        filename = file.filename or ""
+        extension = Path(filename).suffix.lower()
+
+        extension_to_mime = {
+            ".pdf": "application/pdf",
+            ".txt": "text/plain",
+            ".md": "text/markdown",
+            ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        }
+
+        expected_mime = extension_to_mime.get(extension)
+
+        print(
+            "UPLOAD MIME TYPE:",
+            file.content_type,
+            "FILENAME:",
+            file.filename,
+            "EXTENSION:",
+            extension,
+            "EXPECTED MIME:",
+            expected_mime,
+            "ALLOWED:",
+            allowed_types,
+        )
+
+        if expected_mime not in allowed_types:
             raise HTTPException(
                 status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
                 detail="Unsupported file type.",
-            )
+            )   
         
     def get_documents(
         self,

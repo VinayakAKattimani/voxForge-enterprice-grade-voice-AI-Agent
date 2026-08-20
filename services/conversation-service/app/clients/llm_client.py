@@ -40,7 +40,7 @@ class LLMClient:
                         else {}
                     ),
                 },
-                timeout=60,
+                timeout=120,
             )
 
             response.raise_for_status()

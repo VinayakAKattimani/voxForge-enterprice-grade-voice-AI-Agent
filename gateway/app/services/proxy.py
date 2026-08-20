@@ -75,7 +75,7 @@ async def proxy_request(
                 headers=headers,
                 files=files,
                 data=data,
-                timeout=60.0,
+                timeout=150.0,
             )
 
         # ==================================================
@@ -91,7 +91,7 @@ async def proxy_request(
                 url=url,
                 headers=headers,
                 content=json.dumps(body),
-                timeout=60.0,
+                timeout=150.0,
             )
 
         # ==================================================
@@ -113,7 +113,7 @@ async def proxy_request(
                 url=url,
                 headers=headers,
                 content=raw_body,
-                timeout=60.0,
+                timeout=150.0,
             )
 
     except httpx.ConnectError:
