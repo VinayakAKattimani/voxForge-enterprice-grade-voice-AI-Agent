@@ -6,7 +6,6 @@ from app.core.config import settings
 class ChatChain:
 
     def __init__(self):
-
         self.llm = ChatOllama(
             model=settings.OLLAMA_MODEL,
             base_url=settings.OLLAMA_BASE_URL,
@@ -21,8 +20,8 @@ class ChatChain:
 
         response = await self.llm.ainvoke(
             [
-                 SystemMessage(content=system_prompt),
-                 HumanMessage(content="Answer the question."),
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_message),
             ]
         )
 

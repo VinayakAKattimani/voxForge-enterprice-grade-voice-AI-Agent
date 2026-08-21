@@ -21,7 +21,7 @@ class LLMProvider(ABC):
 
         if isinstance(exception, httpx.ConnectError):
             raise LLMException(
-                "Unable to connect to Ollama.",
+                "Unable to connect to the LLM provider.",
                 status_code=503
             ) from exception
 

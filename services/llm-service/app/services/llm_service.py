@@ -1,3 +1,4 @@
+import time
 from uuid import UUID
 
 from app.core.logger import logger
@@ -5,14 +6,12 @@ from app.prompts.prompt_builder import PromptBuilder
 from app.providers.factory import ProviderFactory
 from app.schemas.chat import ChatMessage
 from app.schemas.response import ChatResponse
-from app.langchain.chat_chain import ChatChain
 
 
 class LLMService:
 
     def __init__(self):
         self.provider = ProviderFactory.get_provider()
-        self.chat_chain = ChatChain()
 
     async def generate(
         self,
@@ -31,7 +30,7 @@ class LLMService:
                 "role": msg.role.value,
                 "content": msg.content,
             }
-            for msg in messages[:-1]
+            for msg in messages[-5:-1]
         ]
 
         user_message = messages[-1].content
@@ -44,13 +43,23 @@ class LLMService:
             user_message=user_message,
         )
 
-        logger.info("Sending request to Ollama")
-
-        response = await self.chat_chain.generate(
-            system_prompt=system_prompt,
-            user_message=user_message,
+        logger.info(
+            "llm_prompt_debug\n%s",
+            system_prompt,
         )
 
-        logger.info("Response received from Ollama")
+        logger.info("Waiting for Ollama slot")
+
+        start_time = time.perf_counter()
+
+        logger.info("Sending request to Ollama")
+
+        response = await self.provider.generate(system_prompt)
+
+        elapsed_time = time.perf_counter() - start_time
+
+        logger.info(
+            f"Response received from Ollama in {elapsed_time:.2f}s"
+        )
 
         return ChatResponse(response=response)
