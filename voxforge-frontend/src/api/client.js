@@ -10,7 +10,7 @@ export async function apiRequest(path, options = {}) {
 
   const accessToken =
     window.sessionStorage.getItem(
-      'voxforge-access-token'
+      'thenflo-access-token'
     );
 
   const headers = {
@@ -50,7 +50,7 @@ export async function apiRequest(path, options = {}) {
 
     const refreshToken =
       window.sessionStorage.getItem(
-        'voxforge-refresh-token'
+        'thenflo-refresh-token'
       );
 
 
@@ -84,11 +84,11 @@ export async function apiRequest(path, options = {}) {
     if (!refreshResponse.ok) {
 
       window.sessionStorage.removeItem(
-        'voxforge-access-token'
+        'thenflo-access-token'
       );
 
       window.sessionStorage.removeItem(
-        'voxforge-refresh-token'
+        'thenflo-refresh-token'
       );
 
       throw new Error(
@@ -108,7 +108,7 @@ export async function apiRequest(path, options = {}) {
     if (refreshData.access_token) {
 
       window.sessionStorage.setItem(
-        'voxforge-access-token',
+        'thenflo-access-token',
         refreshData.access_token
       );
     }
@@ -117,7 +117,7 @@ export async function apiRequest(path, options = {}) {
     if (refreshData.refresh_token) {
 
       window.sessionStorage.setItem(
-        'voxforge-refresh-token',
+        'thenflo-refresh-token',
         refreshData.refresh_token
       );
     }

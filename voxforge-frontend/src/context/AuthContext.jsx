@@ -25,7 +25,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
       const storedUser = window.sessionStorage.getItem(
-        'voxforge-user'
+        'thenflo-user'
       );
 
       return storedUser
@@ -43,7 +43,7 @@ export function AuthProvider({ children }) {
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return !!window.sessionStorage.getItem(
-      'voxforge-access-token'
+      'thenflo-access-token'
     );
   });
 
@@ -70,7 +70,7 @@ export function AuthProvider({ children }) {
 
       if (access_token) {
         window.sessionStorage.setItem(
-          'voxforge-access-token',
+          'thenflo-access-token',
           access_token
         );
 
@@ -79,7 +79,7 @@ export function AuthProvider({ children }) {
 
       if (refresh_token) {
         window.sessionStorage.setItem(
-          'voxforge-refresh-token',
+          'thenflo-refresh-token',
           refresh_token
         );
       }
@@ -122,7 +122,7 @@ export function AuthProvider({ children }) {
           `${currentUser.first_name?.[0] || ''}${currentUser.last_name?.[0] || ''}`
             .toUpperCase(),
 
-        org: 'VoxForge',
+        org: 'thenflo',
 
         plan: 'Free',
 
@@ -143,7 +143,7 @@ export function AuthProvider({ children }) {
       setUser(normalizedUser);
 
       window.sessionStorage.setItem(
-        'voxforge-user',
+        'thenflo-user',
         JSON.stringify(normalizedUser)
       );
 
@@ -170,12 +170,12 @@ export function AuthProvider({ children }) {
   useEffect(() => {
   const accessToken =
     window.sessionStorage.getItem(
-      'voxforge-access-token'
+      'thenflo-access-token'
     );
 
   const refreshToken =
     window.sessionStorage.getItem(
-      'voxforge-refresh-token'
+      'thenflo-refresh-token'
     );
 
   if (!accessToken && !refreshToken) {
@@ -203,15 +203,15 @@ export function AuthProvider({ children }) {
       setIsAuthenticated(false);
 
       window.sessionStorage.removeItem(
-        'voxforge-user'
+        'thenflo-user'
       );
 
       window.sessionStorage.removeItem(
-        'voxforge-access-token'
+        'thenflo-access-token'
       );
 
       window.sessionStorage.removeItem(
-        'voxforge-refresh-token'
+        'thenflo-refresh-token'
       );
     }
   };
@@ -326,7 +326,7 @@ export function AuthProvider({ children }) {
 
       const refreshToken =
         window.sessionStorage.getItem(
-          'voxforge-refresh-token'
+          'thenflo-refresh-token'
         );
 
       console.log(
@@ -386,7 +386,7 @@ export function AuthProvider({ children }) {
 
       const refreshToken =
         window.sessionStorage.getItem(
-          'voxforge-refresh-token'
+          'thenflo-refresh-token'
         );
 
       try {
@@ -411,15 +411,15 @@ export function AuthProvider({ children }) {
         setIsAuthenticated(false);
 
         window.sessionStorage.removeItem(
-          'voxforge-user'
+          'thenflo-user'
         );
 
         window.sessionStorage.removeItem(
-          'voxforge-access-token'
+          'thenflo-access-token'
         );
 
         window.sessionStorage.removeItem(
-          'voxforge-refresh-token'
+          'thenflo-refresh-token'
         );
       }
     },

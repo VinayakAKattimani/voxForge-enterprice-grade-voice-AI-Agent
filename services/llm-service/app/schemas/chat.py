@@ -17,7 +17,6 @@ class ChatMessage(BaseModel):
 
 class ChatRequest(BaseModel):
     conversation_id: str
-    user_id: UUID
     messages: list[ChatMessage]
     context: str | None = None
 

@@ -1,4 +1,6 @@
 from fastapi import HTTPException, Request, Response, UploadFile
+from fastapi.responses import StreamingResponse
+
 import httpx
 import json
 
@@ -35,39 +37,128 @@ async def proxy_request(
     headers.pop("host", None)
     headers.pop("content-length", None)
 
-    headers.pop("X-User-ID", None)
-    headers.pop("X-User-Email", None)
+    headers.pop("x-user-id", None)
+    headers.pop("x-user-email", None)
 
     if hasattr(request.state, "user_id"):
-        headers["X-User-ID"] = request.state.user_id
+        headers["X-User-ID"] = str(request.state.user_id)
 
     if hasattr(request.state, "email"):
-        headers["X-User-Email"] = request.state.email
+        headers["X-User-Email"] = str(request.state.email)
 
     print("Forwarding headers:", headers)
     print("Forwarding to:", url)
 
-    try:
+    # ==================================================
+    # STREAMING REQUEST
+    # ==================================================
 
-        # ==================================================
-        # MULTIPART FILE UPLOAD
-        # ==================================================
+    if target_path.endswith("/chat/stream"):
 
-        if multipart_file is not None:
+        raw_body = await request.body()
 
-            file_content = await multipart_file.read()
+        client = get_http_client()
 
-            files = {
-                "file": (
-                    multipart_file.filename,
-                    file_content,
-                    multipart_file.content_type,
+        try:
+            request_context = client.stream(
+                method=request.method,
+                url=url,
+                headers=headers,
+                content=raw_body,
+                timeout=None,
+            )
+
+            upstream = await request_context.__aenter__()
+
+            print(
+                "UPSTREAM STREAM STATUS:",
+                upstream.status_code,
+            )
+
+            if upstream.status_code >= 400:
+
+                error_body = await upstream.aread()
+
+                await request_context.__aexit__(
+                    None,
+                    None,
+                    None,
                 )
-            }
 
-            data = multipart_data or {}
+                print(
+                    "UPSTREAM STREAM ERROR:",
+                    upstream.status_code,
+                    error_body.decode(
+                        "utf-8",
+                        errors="replace",
+                    ),
+                )
 
-            headers.pop("content-type", None)
+                raise HTTPException(
+                    status_code=upstream.status_code,
+                    detail=error_body.decode(
+                        "utf-8",
+                        errors="replace",
+                    ),
+                )
+
+        except httpx.ConnectError:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "success": False,
+                    "service": service_name,
+                    "error": "Service unavailable",
+                },
+            )
+
+        async def stream_response():
+
+            try:
+
+                async for chunk in upstream.aiter_bytes():
+                    yield chunk
+
+            finally:
+
+                await request_context.__aexit__(
+                    None,
+                    None,
+                    None,
+                )
+
+        return StreamingResponse(
+            stream_response(),
+            status_code=upstream.status_code,
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+
+    # ==================================================
+    # MULTIPART FILE UPLOAD
+    # ==================================================
+
+    if multipart_file is not None:
+
+        file_content = await multipart_file.read()
+
+        files = {
+            "file": (
+                multipart_file.filename,
+                file_content,
+                multipart_file.content_type,
+            )
+        }
+
+        data = multipart_data or {}
+
+        headers.pop("content-type", None)
+
+        try:
 
             response = await get_http_client().request(
                 method=request.method,
@@ -78,13 +169,25 @@ async def proxy_request(
                 timeout=150.0,
             )
 
-        # ==================================================
-        # JSON BODY
-        # ==================================================
+        except httpx.ConnectError:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "success": False,
+                    "service": service_name,
+                    "error": "Service unavailable",
+                },
+            )
 
-        elif body is not None:
+    # ==================================================
+    # JSON BODY
+    # ==================================================
 
-            headers["content-type"] = "application/json"
+    elif body is not None:
+
+        headers["content-type"] = "application/json"
+
+        try:
 
             response = await get_http_client().request(
                 method=request.method,
@@ -94,19 +197,32 @@ async def proxy_request(
                 timeout=150.0,
             )
 
-        # ==================================================
-        # NORMAL REQUEST
-        # ==================================================
-
-        else:
-
-            raw_body = await request.body()
-
-            print("RAW BODY:", raw_body)
-            print(
-                "CONTENT-TYPE:",
-                request.headers.get("content-type"),
+        except httpx.ConnectError:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "success": False,
+                    "service": service_name,
+                    "error": "Service unavailable",
+                },
             )
+
+    # ==================================================
+    # NORMAL REQUEST
+    # ==================================================
+
+    else:
+
+        raw_body = await request.body()
+
+        print("RAW BODY:", raw_body)
+
+        print(
+            "CONTENT-TYPE:",
+            request.headers.get("content-type"),
+        )
+
+        try:
 
             response = await get_http_client().request(
                 method=request.method,
@@ -116,15 +232,19 @@ async def proxy_request(
                 timeout=300.0,
             )
 
-    except httpx.ConnectError:
-        raise HTTPException(
-            status_code=503,
-            detail={
-                "success": False,
-                "service": service_name,
-                "error": "Service unavailable",
-            },
-        )
+        except httpx.ConnectError:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "success": False,
+                    "service": service_name,
+                    "error": "Service unavailable",
+                },
+            )
+
+    # ==================================================
+    # NORMAL RESPONSE
+    # ==================================================
 
     excluded_headers = {
         "content-length",
@@ -142,5 +262,7 @@ async def proxy_request(
         content=response.content,
         status_code=response.status_code,
         headers=response_headers,
-        media_type=response.headers.get("content-type"),
+        media_type=response.headers.get(
+            "content-type"
+        ),
     )

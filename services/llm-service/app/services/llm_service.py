@@ -48,18 +48,64 @@ class LLMService:
             system_prompt,
         )
 
-        logger.info("Waiting for Ollama slot")
+        logger.info("Waiting for LLM provider")
 
         start_time = time.perf_counter()
 
-        logger.info("Sending request to Ollama")
+        logger.info("Sending request to LLM provider")
 
-        response = await self.provider.generate(system_prompt)
+        response = await self.provider.generate(
+            system_prompt=system_prompt,
+            user_message=user_message,
+        )
 
         elapsed_time = time.perf_counter() - start_time
 
         logger.info(
-            f"Response received from Ollama in {elapsed_time:.2f}s"
+            f"Response received from LLM provider in {elapsed_time:.2f}s"
         )
 
         return ChatResponse(response=response)
+
+    async def stream_generate(
+        self,
+        conversation_id: str,
+        user_id: UUID,
+        messages: list[ChatMessage],
+        context: str | None = None,
+    ):
+
+        logger.info(
+            f"Streaming response for conversation_id={conversation_id}"
+        )
+
+        history = [
+            {
+                "role": msg.role.value,
+                "content": msg.content,
+            }
+            for msg in messages[-5:-1]
+        ]
+
+        user_message = messages[-1].content
+
+        context = context or ""
+
+        system_prompt = PromptBuilder.build(
+            history=history,
+            context=context,
+            user_message=user_message,
+        )
+
+        logger.info(
+            "llm_prompt_debug\n%s",
+            system_prompt,
+        )
+
+        logger.info("Starting LLM streaming")
+
+        async for chunk in self.provider.stream_generate(
+            system_prompt=system_prompt,
+            user_message=user_message,
+        ):
+            yield chunk

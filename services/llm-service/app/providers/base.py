@@ -5,11 +5,19 @@ from app.exceptions.llm_exception import LLMException
 class LLMProvider(ABC):
 
     @abstractmethod
-    async def generate(self, message):
+    async def generate( 
+        self,
+        system_prompt: str,
+        user_message: str,
+    ) -> str:
         pass
 
     @abstractmethod
-    async def stream_generate(self, message):
+    async def stream_generate(
+        self,
+        system_prompt: str,
+        user_message: str,
+    ):
         pass
 
     @abstractmethod
